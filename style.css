@@ -1,0 +1,71 @@
+/* General body styling from Google Fonts */
+body {
+    font-family: 'Inter', sans-serif;
+    touch-action: none; /* Prevents scrolling on touch devices during gameplay */
+}
+
+/* Base styling for each letter tile on the grid */
+.tile {
+    transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent; /* Add a transparent border to reserve space */
+}
+
+/* Base class for a selected tile. */
+.tile.selected {
+    color: #1e293b; /* slate-800 */
+}
+
+/* Pastel Yellow: For a potential word or an already found word */
+.tile.potential {
+    background-color: #fef9c3; /* yellow-100 */
+    border-color: #fde047; /* yellow-400 */
+}
+
+/* Pastel Green: For a valid, not-yet-found word */
+.tile.valid {
+    background-color: #dcfce7; /* green-100 */
+    border-color: #4ade80; /* green-400 */
+}
+
+/* Pastel Red: For a brief flash on invalid submission */
+.tile.invalid {
+    background-color: #fee2e2; /* red-200 */
+    border-color: #f87171; /* red-400 */
+}
+
+/* Styling for the placeholders in the 'Possible Words' list */
+.word-placeholder {
+    letter-spacing: 0.2em;
+    color: #cbd5e1; /* Tailwind's slate-300 */
+}
+
+/* Styling for a word in the list that the user has successfully found */
+.word-found {
+    letter-spacing: normal;
+    color: #1e293b; /* Tailwind's slate-800 */
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Custom scrollbar for the words list to make it look cleaner */
+.custom-scrollbar::-webkit-scrollbar { 
+    width: 8px; 
+}
+.custom-scrollbar::-webkit-scrollbar-track { 
+    background: #f1f5f9; /* Tailwind's slate-100 */
+    border-radius: 10px; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+    background: #94a3b8; /* Tailwind's slate-400 */
+    border-radius: 10px; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { 
+    background: #64748b; /* Tailwind's slate-500 */
+}
+
+/* Styling for disabled buttons */
+button:disabled {
+    background-color: #94a3b8; /* Tailwind's slate-400 */
+    cursor: not-allowed;
+}
