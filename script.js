@@ -1,10 +1,6 @@
 // --- DOM Elements ---
 const gameContainer = document.getElementById('game-container');
-const modeSelection = document.getElementById('mode-selection');
 const loadingText = document.getElementById('loading-text');
-const modeButtons = document.getElementById('mode-buttons');
-const timedModeBtn = document.getElementById('timed-mode-btn');
-const endlessModeBtn = document.getElementById('endless-mode-btn');
 const gridContainer = document.getElementById('grid-container');
 const currentWordEl = document.getElementById('current-word');
 const scoreEl = document.getElementById('score');
@@ -13,16 +9,14 @@ const timerLabel = document.getElementById('timer-label');
 const timerEl = document.getElementById('timer');
 const possibleWordsEl = document.getElementById('possible-words');
 const wordCountEl = document.getElementById('word-count');
-const changeModeBtn = document.getElementById('change-mode-btn');
 const revealBtn = document.getElementById('reveal-btn');
 const newBoardBtn = document.getElementById('new-board-btn');
 const gameButtonsContainer = document.getElementById('game-buttons');
 const messageOverlay = document.getElementById('message-overlay');
 const messageText = document.getElementById('message-text');
 const messageScore = document.getElementById('message-score');
-const messageCloseBtn = document.getElementById('message-close-btn');
 
-// --- Game Configuration ---
+// --- Game Configuration & State ---
 const GRID_SIZE = 4;
 const GAME_DURATION = 90;
 const CUSTOM_DICE = [
@@ -30,51 +24,64 @@ const CUSTOM_DICE = [
     "ADENOV", "WFLRTV", "CIMPQU", "GHJOTW", "BKNOPZ", "CDLMSY",
     "ABDEGT", "IJKSUV", "OPRTUX", "XYZVWB"
 ];
-
-// --- Game State ---
 let DICTIONARY = new Set();
 let PREFIXES = new Set();
 let grid = [];
 let score = 0;
 let timer = GAME_DURATION;
 let timerInterval = null;
-let gameMode = 'timed';
+let gameMode = '';
 let allPossibleWords = new Set();
 let foundWords = new Set();
 let isPlaying = false;
 let isDragging = false;
 let selectedTiles = [];
 
-// --- Dictionary Loading from JSON ---
+// --- Dictionary & Game Initialization ---
 async function initializeDictionary() {
     try {
         const response = await fetch('./words_dictionary.json');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const wordObject = await response.json();
         const wordList = Object.keys(wordObject).map(word => word.toUpperCase());
-
         DICTIONARY = new Set(wordList);
-
         PREFIXES = new Set();
         for (const word of DICTIONARY) {
             for (let i = 1; i < word.length; i++) {
                 PREFIXES.add(word.substring(0, i));
             }
         }
-        console.log('JSON Dictionary and prefixes loaded successfully.');
-        loadingText.textContent = 'Wordhunt all day all night!';
-        modeButtons.classList.remove('hidden');
-
+        return true;
     } catch (error) {
         console.error("Could not load dictionary:", error);
-        loadingText.textContent = "Error: Could not load words_dictionary.json. Please make sure it's in the same directory and is a valid JSON file.";
-        loadingText.classList.add('text-red-500');
+        if (gameContainer) gameContainer.innerHTML = `<div class="text-red-500 p-4">Error: Could not load dictionary. Please check the file path and ensure it's a valid JSON.</div>`;
+        return false;
     }
 }
 
-// --- Game Logic ---
+async function initializeGame(mode) {
+    const dictionaryLoaded = await initializeDictionary();
+    if (!dictionaryLoaded) return;
+    gameMode = mode;
+    isPlaying = true;
+    if (gameMode === 'endless') {
+        timerLabel.style.display = 'none';
+        timerEl.innerHTML = '&infin;';
+        revealBtn.classList.remove('hidden');
+        newBoardBtn.classList.remove('hidden');
+        document.getElementById('words-list-container').style.display = 'block';
+        revealBtn.addEventListener('click', handleRevealAnswers);
+        newBoardBtn.addEventListener('click', () => handleNewBoard(false));
+    } else {
+        timerLabel.style.display = 'block';
+        timerEl.textContent = GAME_DURATION;
+        startTimer();
+    }
+    handleNewBoard(true);
+    addEventListeners();
+}
+
+// --- Core Game Logic ---
 function generateGrid() {
     grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(''));
     let tempDice = [...CUSTOM_DICE];
@@ -104,40 +111,8 @@ function renderGrid() {
     }
 }
 
-function startGame(mode) {
-    gameMode = mode;
-    modeSelection.classList.add('hidden');
-    gameContainer.classList.remove('hidden');
-
-    isPlaying = true;
-    
-    if (gameMode === 'endless') {
-        timerLabel.style.display = 'none';
-        timerEl.innerHTML = '&infin;'; // Infinity symbol
-        revealBtn.classList.remove('hidden');
-        newBoardBtn.classList.remove('hidden');
-        gameButtonsContainer.classList.add('sm:grid-cols-3');
-        gameButtonsContainer.classList.remove('sm:grid-cols-1');
-        document.getElementById('words-list-container').style.display = 'block';
-    } else { // Timed mode
-        timerLabel.style.display = 'block';
-        timerEl.textContent = GAME_DURATION;
-        revealBtn.classList.add('hidden');
-        newBoardBtn.classList.add('hidden');
-        gameButtonsContainer.classList.remove('sm:grid-cols-3');
-        gameButtonsContainer.classList.add('sm:grid-cols-1');
-        document.getElementById('words-list-container').style.display = 'none'; // Hide word list in timed mode
-        startTimer();
-    }
-
-    handleNewBoard(true); // Initial board generation
-    addEventListeners();
-}
-
 function startTimer() {
-    // FIX: Ensure timer only runs in 'timed' mode.
     if (gameMode !== 'timed') return;
-
     timer = GAME_DURATION;
     timerEl.textContent = timer;
     clearInterval(timerInterval);
@@ -153,7 +128,7 @@ function startTimer() {
 function endGame(message) {
     isPlaying = false;
     clearInterval(timerInterval);
-    if(gameMode === 'timed') timerEl.textContent = '0';
+    if (gameMode === 'timed') timerEl.textContent = '0';
     messageText.textContent = message;
     messageScore.textContent = `Your final score is ${new Intl.NumberFormat().format(score)}.`;
     messageOverlay.classList.remove('hidden');
@@ -190,7 +165,6 @@ function solveBoard() {
             traverse(i, j, "");
         }
     }
-    console.log(`Board solved. Found ${allPossibleWords.size} possible words.`);
 }
 
 function renderPossibleWords() {
@@ -228,22 +202,22 @@ function handleRevealAnswers() {
 }
 
 function handleNewBoard(isFirstTime = false) {
-     if (gameMode === 'timed' && !isFirstTime) return;
+    if (gameMode === 'timed' && !isFirstTime) return;
 
     score = 0;
     foundWords.clear();
     scoreEl.textContent = '0';
     messageOverlay.classList.add('hidden');
-    
+
     generateGrid();
     renderGrid();
     solveBoard();
-    
+
     if (gameMode === 'endless') {
         renderPossibleWords();
         revealBtn.disabled = false;
     }
-    
+
     resetSelection();
 }
 
@@ -255,44 +229,14 @@ function updateScore(word) {
         case 4: points = 400; break;
         case 5: points = 800; break;
         case 6: points = 1400; break;
-        case 7: points = 1800; break;
-        case 8: points = 2200; break;
         default:
-            if (len > 8) {
-                points = 2200 + (len - 8) * 400;
+            if (len >= 7) {
+                points = 1400 + (len - 6) * 400;
             }
             break;
     }
     score += points;
     scoreEl.textContent = new Intl.NumberFormat().format(score);
-}
-
-function updatePathColors() {
-    const word = selectedTiles.map(t => t.textContent).join('').toUpperCase();
-    let pathClass = 'potential';
-    if (allPossibleWords.has(word) && !foundWords.has(word)) {
-        pathClass = 'valid';
-    }
-    document.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('potential', 'valid'));
-    selectedTiles.forEach(tile => tile.classList.add(pathClass));
-}
-
-function flashInvalidPath() {
-    const tilesToFlash = [...selectedTiles];
-    tilesToFlash.forEach(tile => {
-        tile.classList.remove('potential', 'valid', 'selected');
-        tile.classList.add('invalid');
-    });
-    setTimeout(() => {
-        tilesToFlash.forEach(tile => tile.classList.remove('invalid'));
-    }, 200);
-}
-
-function selectTile(tile) {
-    tile.classList.add('selected');
-    selectedTiles.push(tile);
-    currentWordEl.textContent = selectedTiles.map(t => t.textContent).join('');
-    updatePathColors();
 }
 
 function revealWordInList(word) {
@@ -304,10 +248,39 @@ function revealWordInList(word) {
     }
 }
 
+
+// --- Interaction Logic & Visual Feedback ---
+function updatePathColors() {
+    const word = selectedTiles.map(t => t.textContent).join('').toUpperCase();
+    let pathClass = 'potential';
+    if (allPossibleWords.has(word) && !foundWords.has(word)) {
+        pathClass = 'valid';
+    }
+    document.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('potential', 'valid'));
+    selectedTiles.forEach(tile => tile.classList.add(pathClass));
+}
+
+function flashInvalidPath(tilesToFlash) {
+    tilesToFlash.forEach(tile => {
+        tile.classList.remove('potential', 'valid', 'selected');
+        tile.classList.add('invalid');
+    });
+    setTimeout(() => {
+        tilesToFlash.forEach(tile => tile.classList.remove('invalid'));
+    }, 300);
+}
+
 function resetSelection() {
-    selectedTiles.forEach(tile => tile.classList.remove('selected', 'potential', 'valid'));
+    selectedTiles.forEach(tile => tile.classList.remove('selected', 'potential', 'valid', 'invalid'));
     selectedTiles = [];
     currentWordEl.textContent = '';
+}
+
+function selectTile(tile) {
+    tile.classList.add('selected');
+    selectedTiles.push(tile);
+    currentWordEl.textContent = selectedTiles.map(t => t.textContent).join('');
+    updatePathColors();
 }
 
 function handleInteractionStart(e) {
@@ -316,6 +289,7 @@ function handleInteractionStart(e) {
     const tile = e.target.closest('.tile');
     if (tile) {
         isDragging = true;
+        resetSelection();
         selectTile(tile);
     }
 }
@@ -326,9 +300,16 @@ function handleInteractionMove(e) {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const element = document.elementFromPoint(clientX, clientY);
-    if (element && element.classList.contains('tile') && !element.classList.contains('selected')) {
-        const lastTile = selectedTiles[selectedTiles.length - 1];
-        if (lastTile) {
+
+    if (element && element.classList.contains('tile') && !selectedTiles.includes(element)) {
+        const rect = element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const radius = (rect.width / 2) * 0.8;
+        const distance = Math.sqrt(Math.pow(clientX - centerX, 2) + Math.pow(clientY - centerY, 2));
+
+        if (distance <= radius) {
+            const lastTile = selectedTiles[selectedTiles.length - 1];
             const lastRow = parseInt(lastTile.dataset.row);
             const lastCol = parseInt(lastTile.dataset.col);
             const currentRow = parseInt(element.dataset.row);
@@ -344,24 +325,30 @@ function handleInteractionMove(e) {
 function handleInteractionEnd(e) {
     if (!isDragging || !isPlaying) return;
     e.preventDefault();
-    isDragging = false;
+
     const word = selectedTiles.map(tile => tile.textContent).join('').toUpperCase();
-    if (allPossibleWords.has(word)) {
-        if (!foundWords.has(word)) {
-            foundWords.add(word);
-            updateScore(word);
-            if (gameMode === 'endless') {
-                revealWordInList(word);
-                updateWordCount();
-                if (foundWords.size === allPossibleWords.size) {
-                    endGame("You found all the words!");
-                }
-            }
-        }
-    } else if (word.length > 0) {
-        flashInvalidPath();
-    }
+    const tilesToProcess = [...selectedTiles];
+
+    isDragging = false;
     resetSelection();
+
+    if (tilesToProcess.length === 0) return;
+
+    const isAWord = allPossibleWords.has(word);
+    const isAlreadyFound = foundWords.has(word);
+
+    if (isAWord && !isAlreadyFound) {
+        foundWords.add(word);
+        updateScore(word);
+        if (gameMode === 'endless') {
+            revealWordInList(word);
+            updateWordCount();
+        }
+    } else if (isAWord && isAlreadyFound) {
+        // Do nothing.
+    } else if (tilesToProcess.length > 0) {
+        flashInvalidPath(tilesToProcess);
+    }
 }
 
 function addEventListeners() {
@@ -381,24 +368,3 @@ function removeEventListeners() {
     gridContainer.removeEventListener('touchmove', handleInteractionMove);
     window.removeEventListener('touchend', handleInteractionEnd);
 }
-
-function resetToModeSelection() {
-    gameContainer.classList.add('hidden');
-    messageOverlay.classList.add('hidden');
-    modeSelection.classList.remove('hidden');
-    
-    // FIX: Explicitly clear the timer interval when changing modes.
-    clearInterval(timerInterval);
-
-    removeEventListeners();
-}
-
-// --- Initialization ---
-timedModeBtn.addEventListener('click', () => startGame('timed'));
-endlessModeBtn.addEventListener('click', () => startGame('endless'));
-changeModeBtn.addEventListener('click', resetToModeSelection);
-revealBtn.addEventListener('click', handleRevealAnswers);
-newBoardBtn.addEventListener('click', () => handleNewBoard(false));
-messageCloseBtn.addEventListener('click', resetToModeSelection);
-
-initializeDictionary();

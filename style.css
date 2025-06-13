@@ -1,12 +1,16 @@
 /* General body styling from Google Fonts */
 body {
     font-family: 'Inter', sans-serif;
-    touch-action: none; /* Prevents scrolling on touch devices during gameplay */
+}
+
+/* Prevents page scrolling ONLY when interacting with the grid */
+#grid-container {
+    touch-action: none;
 }
 
 /* Base styling for each letter tile on the grid */
 .tile {
-    transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out;
+    transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out, transform 0.1s ease-in-out;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     border: 2px solid transparent; /* Add a transparent border to reserve space */
 }
@@ -49,18 +53,18 @@ body {
 }
 
 /* Custom scrollbar for the words list to make it look cleaner */
-.custom-scrollbar::-webkit-scrollbar { 
-    width: 8px; 
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
 }
-.custom-scrollbar::-webkit-scrollbar-track { 
+.custom-scrollbar::-webkit-scrollbar-track {
     background: #f1f5f9; /* Tailwind's slate-100 */
-    border-radius: 10px; 
+    border-radius: 10px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb { 
+.custom-scrollbar::-webkit-scrollbar-thumb {
     background: #94a3b8; /* Tailwind's slate-400 */
-    border-radius: 10px; 
+    border-radius: 10px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { 
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #64748b; /* Tailwind's slate-500 */
 }
 

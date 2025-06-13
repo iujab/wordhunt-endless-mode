@@ -7,133 +7,62 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* General body styling from Google Fonts */
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Base styling for each letter tile on the grid */
-        .tile {
-            transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-            border: 2px solid transparent; /* Add a transparent border to reserve space */
-        }
-        
-        /* Prevents page scrolling ONLY when interacting with the grid */
-        #grid-container {
-            touch-action: none;
-        }
-
-        /* Base class for a selected tile. */
-        .tile.selected {
-            color: #1e293b; /* slate-800 */
-        }
-
-        /* Pastel Yellow: For a potential word or an already found word */
-        .tile.potential {
-            background-color: #fef9c3; /* yellow-100 */
-            border-color: #fde047; /* yellow-400 */
-        }
-
-        /* Pastel Green: For a valid, not-yet-found word */
-        .tile.valid {
-            background-color: #dcfce7; /* green-100 */
-            border-color: #4ade80; /* green-400 */
-        }
-
-        /* Pastel Red: For a brief flash on invalid submission */
-        .tile.invalid {
-            background-color: #fee2e2; /* red-200 */
-            border-color: #f87171; /* red-400 */
-        }
-
-        /* Styling for the placeholders in the 'Possible Words' list */
-        .word-placeholder {
-            letter-spacing: 0.2em;
-            color: #cbd5e1; /* Tailwind's slate-300 */
-        }
-
-        /* Styling for a word in the list that the user has successfully found */
-        .word-found {
-            letter-spacing: normal;
-            color: #1e293b; /* Tailwind's slate-800 */
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        /* Custom scrollbar for the words list to make it look cleaner */
-        .custom-scrollbar::-webkit-scrollbar { 
-            width: 8px; 
-        }
-        .custom-scrollbar::-webkit-scrollbar-track { 
-            background: #f1f5f9; /* Tailwind's slate-100 */
-            border-radius: 10px; 
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb { 
-            background: #94a3b8; /* Tailwind's slate-400 */
-            border-radius: 10px; 
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { 
-            background: #64748b; /* Tailwind's slate-500 */
-        }
-
-        /* Styling for disabled buttons */
-        button:disabled {
-            background-color: #94a3b8; /* Tailwind's slate-400 */
-            cursor: not-allowed;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+<body class="bg-slate-100">
 
-    <div id="game-container" class="w-full max-w-md mx-auto p-4 hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <span class="text-slate-500">Score</span>
-                    <p id="score" class="text-2xl font-bold text-slate-800">0</p>
+    <div class="flex flex-col items-center justify-center min-h-screen p-4">
+
+        <div class="mb-4">
+            <img src="icon.png" alt="Wordhunt Game Icon" class="w-24 h-24 rounded-lg shadow-lg">
+        </div>
+
+        <div class="mb-8 w-full max-w-sm text-center">
+            <p class="text-slate-500">
+                A modern rendition of Game Pigeon's Wordhunt. Relax and find all the words at your own pace in endless mode. Wordhunt all day all night!
+            </p>
+        </div>
+
+        <div id="mode-selection" class="w-full max-w-sm mx-auto text-center">
+            <div class="bg-white rounded-lg shadow-xl p-8">
+                <h1 class="text-4xl font-bold text-slate-800 mb-2">Endless Wordhunt</h1>
+                <p id="loading-text" class="text-slate-600 mb-8">Select a Game Mode</p>
+                <div id="mode-buttons" class="space-y-4">
+                    <a href="timed.html" id="timed-mode-btn" class="block w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md text-lg">Timed Mode</a>
+                    <a href="endless.html" id="endless-mode-btn" class="block w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-700 transition duration-300 shadow-md text-lg">Endless Mode</a>
                 </div>
-                <div id="timer-container">
-                    <span id="timer-label" class="text-slate-500">Time</span>
-                    <p id="timer" class="text-2xl font-bold text-slate-800">90</p>
+            </div>
+        </div>
+        
+        <div class="w-full max-w-sm mx-auto mt-8">
+            <div class="bg-white rounded-lg shadow-xl p-8 text-left">
+                <div class="space-y-4 text-slate-600">
+                    <div>
+                        <p class="font-semibold text-slate-700">TODO:</p>
+                        <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
+                            <li>Trace lines between selected letters.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-slate-700">v1.1: Jun 13, 2025</p>
+                        <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
+                            <li>Adjusted page layout.</li>
+                            <li>Vastly improved word dictionary.</li>
+                            <li>Reduced the size of letter hitboxes.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-slate-700">v1.0: Jun 12, 2025</p>
+                        <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
+                            <li>Site launched.</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-            <div id="current-word-container" class="w-full h-12 bg-slate-200 rounded-lg flex items-center justify-center mb-4">
-                <p id="current-word" class="text-2xl font-semibold text-slate-600 tracking-widest"></p>
-            </div>
-            <div id="grid-container" class="grid grid-cols-4 gap-2 aspect-square select-none"></div>
-            <div id="game-buttons" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
-                <button id="reveal-btn" class="w-full bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600 transition duration-300 shadow-md hidden">Reveal</button>
-                <button id="new-board-btn" class="w-full bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-600 transition duration-300 shadow-md hidden">New Board</button>
-                <button id="change-mode-btn" class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md">Change Mode</button>
-            </div>
         </div>
-        <div id="words-list-container" class="bg-white rounded-lg shadow-xl p-6 mt-4">
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Possible Words (<span id="word-count">0</span>)</h2>
-            <div id="possible-words" class="h-64 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1"></div>
-        </div>
-    </div>
 
-    <div id="mode-selection" class="w-full max-w-sm mx-auto p-4 text-center">
-        <div class="bg-white rounded-lg shadow-xl p-8">
-            <h1 class="text-4xl font-bold text-slate-800 mb-6">Endless Wordhunt</h1>
-            <p id="loading-text" class="text-slate-600 mb-8">Loading Dictionary...</p>
-            <div id="mode-buttons" class="space-y-4 hidden">
-                <button id="timed-mode-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md text-lg">Timed Mode</button>
-                <button id="endless-mode-btn" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-700 transition duration-300 shadow-md text-lg">Endless Mode</button>
-            </div>
-        </div>
     </div>
-
-    <div id="message-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-        <div id="message-box" class="bg-white p-8 rounded-lg shadow-2xl text-center max-w-sm mx-4">
-            <p id="message-text" class="text-2xl font-bold text-slate-800"></p>
-            <p id="message-score" class="text-xl mt-2"></p>
-            <button id="message-close-btn" class="mt-6 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">Play Again</button>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
+    
+    <script src="landing.js"></script>
 </body>
 </html>
