@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7798585050512728"
+     crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Endless Wordhunt</title>
@@ -12,6 +14,9 @@
 <body class="bg-slate-100 flex items-center justify-center min-h-screen">
 
     <div id="game-container" class="w-full max-w-md mx-auto p-4">
+        
+        <p class="text-slate-500 text-sm text-center mb-2 italic">*Scroll down to see remaining and completed words</p>
+
         <div class="bg-white rounded-lg shadow-xl p-6">
             <div class="flex justify-between items-center mb-4">
                 <div>
@@ -26,7 +31,9 @@
             <div id="current-word-container" class="w-full h-12 bg-slate-200 rounded-lg flex items-center justify-center mb-4">
                 <p id="current-word" class="text-2xl font-semibold text-slate-600 tracking-widest"></p>
             </div>
-            <div id="grid-container" class="grid grid-cols-4 gap-2 aspect-square select-none"></div>
+            <div id="grid-container" class="relative grid grid-cols-4 gap-2 aspect-square select-none">
+                <svg id="trace-svg" class="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></svg>
+            </div>
             <div id="game-buttons" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
                 <button id="reveal-btn" class="w-full bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600 transition duration-300 shadow-md">Reveal</button>
                 <button id="new-board-btn" class="w-full bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-600 transition duration-300 shadow-md">New Board</button>
@@ -39,7 +46,7 @@
         </div>
     </div>
 
-    <div id="message-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div id="message-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div id="message-box" class="bg-white p-8 rounded-lg shadow-2xl text-center max-w-sm mx-4">
             <p id="message-text" class="text-2xl font-bold text-slate-800"></p>
             <p id="message-score" class="text-xl mt-2"></p>

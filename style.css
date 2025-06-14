@@ -8,12 +8,40 @@ body {
     touch-action: none;
 }
 
+#message-overlay {
+    z-index: 50;
+}
+
 /* Base styling for each letter tile on the grid */
 .tile {
+    /* The z-index ensures tiles are "below" the SVG lines but clickable */
+    position: relative;
+    z-index: 5;
     transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out, transform 0.1s ease-in-out;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     border: 2px solid transparent; /* Add a transparent border to reserve space */
 }
+
+/* SVG Line Styling */
+#trace-svg line {
+    stroke: rgba(0, 0, 0, 0.0); /* Start transparent */
+    stroke-width: 8px;   /* Line thickness */
+    stroke-linecap: round; /* Rounded line ends */
+    transition: stroke 0.1s ease-in-out; /* Smooth color change */
+}
+
+#trace-svg line.potential {
+    stroke: rgba(253, 224, 71, 0.5); /* yellow-400 with 70% opacity */
+}
+
+#trace-svg line.valid {
+    stroke: rgba(74, 222, 160, 0.5); /* green-400 with 70% opacity */
+}
+
+#trace-svg line.invalid {
+    stroke: rgba(248, 113, 113, 0.5); /* red-400 with 70% opacity */
+}
+
 
 /* Base class for a selected tile. */
 .tile.selected {

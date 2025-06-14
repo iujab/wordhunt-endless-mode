@@ -2,6 +2,7 @@
 const gameContainer = document.getElementById('game-container');
 const loadingText = document.getElementById('loading-text');
 const gridContainer = document.getElementById('grid-container');
+const traceSvg = document.getElementById('trace-svg');
 const currentWordEl = document.getElementById('current-word');
 const scoreEl = document.getElementById('score');
 const timerContainer = document.getElementById('timer-container');
@@ -36,6 +37,7 @@ let foundWords = new Set();
 let isPlaying = false;
 let isDragging = false;
 let selectedTiles = [];
+let selectedLines = [];
 
 // --- Dictionary & Game Initialization ---
 async function initializeDictionary() {
@@ -97,8 +99,11 @@ function generateGrid() {
     }
 }
 
+// --- EDITED: renderGrid is now more robust to prevent duplicate boards ---
 function renderGrid() {
-    gridContainer.innerHTML = '';
+    // Specifically find and remove all old tile elements
+    gridContainer.querySelectorAll('.tile').forEach(tile => tile.remove());
+
     for (let i = 0; i < GRID_SIZE; i++) {
         for (let j = 0; j < GRID_SIZE; j++) {
             const tile = document.createElement('div');
@@ -106,7 +111,49 @@ function renderGrid() {
             tile.dataset.row = i;
             tile.dataset.col = j;
             tile.className = 'tile bg-white rounded-lg flex items-center justify-center text-2xl sm:text-3xl font-bold text-slate-700 cursor-pointer select-none';
-            gridContainer.appendChild(tile);
+            // Insert the new tile before the SVG element to keep it on top
+            gridContainer.insertBefore(tile, traceSvg);
+        }
+    }
+}
+
+function generateTraceLattice() {
+    traceSvg.innerHTML = '';
+    const tileElements = Array.from(gridContainer.querySelectorAll('.tile'));
+    if (tileElements.length === 0) return;
+
+    const tileCoords = tileElements.map(tile => {
+        const rect = tile.getBoundingClientRect();
+        const containerRect = gridContainer.getBoundingClientRect();
+        return {
+            row: parseInt(tile.dataset.row),
+            col: parseInt(tile.dataset.col),
+            x: rect.left - containerRect.left + rect.width / 2,
+            y: rect.top - containerRect.top + rect.height / 2,
+        };
+    });
+
+    const namespace = "http://www.w3.org/2000/svg";
+    for (let i = 0; i < tileCoords.length; i++) {
+        for (let j = i + 1; j < tileCoords.length; j++) {
+            const tileA = tileCoords[i];
+            const tileB = tileCoords[j];
+
+            const isAdjacent = Math.abs(tileA.row - tileB.row) <= 1 && Math.abs(tileA.col - tileB.col) <= 1;
+
+            if (isAdjacent) {
+                const line = document.createElementNS(namespace, 'line');
+                line.setAttribute('x1', tileA.x);
+                line.setAttribute('y1', tileA.y);
+                line.setAttribute('x2', tileB.x);
+                line.setAttribute('y2', tileB.y);
+
+                const id1 = `tile-${tileA.row}-${tileA.col}`;
+                const id2 = `tile-${tileB.row}-${tileB.col}`;
+                line.id = [id1, id2].sort().join('--');
+
+                traceSvg.appendChild(line);
+            }
         }
     }
 }
@@ -213,6 +260,8 @@ function handleNewBoard(isFirstTime = false) {
     renderGrid();
     solveBoard();
 
+    setTimeout(generateTraceLattice, 50);
+
     if (gameMode === 'endless') {
         renderPossibleWords();
         revealBtn.disabled = false;
@@ -225,10 +274,18 @@ function updateScore(word) {
     let points = 0;
     const len = word.length;
     switch (len) {
-        case 3: points = 100; break;
-        case 4: points = 400; break;
-        case 5: points = 800; break;
-        case 6: points = 1400; break;
+        case 3:
+            points = 100;
+            break;
+        case 4:
+            points = 400;
+            break;
+        case 5:
+            points = 800;
+            break;
+        case 6:
+            points = 1400;
+            break;
         default:
             if (len >= 7) {
                 points = 1400 + (len - 6) * 400;
@@ -252,31 +309,59 @@ function revealWordInList(word) {
 // --- Interaction Logic & Visual Feedback ---
 function updatePathColors() {
     const word = selectedTiles.map(t => t.textContent).join('').toUpperCase();
-    let pathClass = 'potential';
+    let tileClass = 'potential';
+    let lineClass = 'potential';
+
     if (allPossibleWords.has(word) && !foundWords.has(word)) {
-        pathClass = 'valid';
+        tileClass = 'valid';
+        lineClass = 'valid';
     }
+
     document.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('potential', 'valid'));
-    selectedTiles.forEach(tile => tile.classList.add(pathClass));
+    selectedTiles.forEach(tile => tile.classList.add(tileClass));
+
+    selectedLines.forEach(line => {
+        line.classList.remove('potential', 'valid');
+        line.classList.add(lineClass);
+    });
 }
 
-function flashInvalidPath(tilesToFlash) {
+function flashInvalidPath(tilesToFlash, linesToFlash) {
     tilesToFlash.forEach(tile => {
         tile.classList.remove('potential', 'valid', 'selected');
         tile.classList.add('invalid');
     });
+    linesToFlash.forEach(line => {
+        line.classList.remove('potential', 'valid');
+        line.classList.add('invalid');
+    });
+
     setTimeout(() => {
         tilesToFlash.forEach(tile => tile.classList.remove('invalid'));
+        linesToFlash.forEach(line => line.classList.remove('invalid'));
     }, 300);
 }
 
 function resetSelection() {
     selectedTiles.forEach(tile => tile.classList.remove('selected', 'potential', 'valid', 'invalid'));
+    selectedLines.forEach(line => line.classList.remove('potential', 'valid', 'invalid'));
     selectedTiles = [];
+    selectedLines = [];
     currentWordEl.textContent = '';
 }
 
 function selectTile(tile) {
+    if (selectedTiles.length > 0) {
+        const prevTile = selectedTiles[selectedTiles.length - 1];
+        const id1 = `tile-${prevTile.dataset.row}-${prevTile.dataset.col}`;
+        const id2 = `tile-${tile.dataset.row}-${tile.dataset.col}`;
+        const lineId = [id1, id2].sort().join('--');
+        const line = document.getElementById(lineId);
+        if (line) {
+            selectedLines.push(line);
+        }
+    }
+
     tile.classList.add('selected');
     selectedTiles.push(tile);
     currentWordEl.textContent = selectedTiles.map(t => t.textContent).join('');
@@ -305,7 +390,7 @@ function handleInteractionMove(e) {
         const rect = element.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        const radius = (rect.width / 2) * 0.8;
+        const radius = (rect.width / 2) * 1; //We are just cutting corners
         const distance = Math.sqrt(Math.pow(clientX - centerX, 2) + Math.pow(clientY - centerY, 2));
 
         if (distance <= radius) {
@@ -328,6 +413,7 @@ function handleInteractionEnd(e) {
 
     const word = selectedTiles.map(tile => tile.textContent).join('').toUpperCase();
     const tilesToProcess = [...selectedTiles];
+    const linesToProcess = [...selectedLines];
 
     isDragging = false;
     resetSelection();
@@ -347,7 +433,7 @@ function handleInteractionEnd(e) {
     } else if (isAWord && isAlreadyFound) {
         // Do nothing.
     } else if (tilesToProcess.length > 0) {
-        flashInvalidPath(tilesToProcess);
+        flashInvalidPath(tilesToProcess, linesToProcess);
     }
 }
 
@@ -355,9 +441,15 @@ function addEventListeners() {
     gridContainer.addEventListener('mousedown', handleInteractionStart);
     gridContainer.addEventListener('mousemove', handleInteractionMove);
     window.addEventListener('mouseup', handleInteractionEnd);
-    gridContainer.addEventListener('touchstart', handleInteractionStart, { passive: false });
-    gridContainer.addEventListener('touchmove', handleInteractionMove, { passive: false });
-    window.addEventListener('touchend', handleInteractionEnd, { passive: false });
+    gridContainer.addEventListener('touchstart', handleInteractionStart, {
+        passive: false
+    });
+    gridContainer.addEventListener('touchmove', handleInteractionMove, {
+        passive: false
+    });
+    window.addEventListener('touchend', handleInteractionEnd, {
+        passive: false
+    });
 }
 
 function removeEventListeners() {
