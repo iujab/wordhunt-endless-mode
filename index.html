@@ -13,12 +13,12 @@
 </head>
 <body class="bg-slate-100">
 
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js"; // Changed to 11.6.1
+        // CHANGED: Imported 'applyActionCode'
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, applyActionCode } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC0LqycO4DZx89kPkQ3iI6C-K65U3C6Aog",
@@ -37,13 +37,12 @@
         const db = getFirestore(app);
 
         // Make all necessary functions globally available
-        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch };
+        // CHANGED: Added 'applyActionCode' to the global window object.
+        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, applyActionCode, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot };
     </script>
 
-    <!-- Main Content -->
-    <div class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="relative flex flex-col items-center justify-center min-h-screen p-4">
 
-        <!-- Auth Status and Control -->
         <div id="auth-container" class="absolute top-4 right-4 text-right">
             <div id="user-info" class="hidden">
                 <p class="text-slate-600">Welcome, <span id="user-display-name" class="font-semibold"></span></p>
@@ -55,8 +54,10 @@
                 <button id="signup-modal-btn" class="bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition">Sign Up</button>
             </div>
         </div>
+        
+        <div id="verification-message-container" class="w-full max-w-sm text-center mb-4"></div>
 
-        <div class="mb-4">
+        <div class="mt-20 md:mt-0 mb-4">
             <img src="icon.png" alt="Wordhunt Game Icon" class="w-24 h-24 rounded-lg shadow-lg">
         </div>
 
@@ -77,18 +78,15 @@
             </div>
         </div>
 
-        <!-- Leaderboard -->
         <div id="leaderboard" class="w-full max-w-sm mx-auto mt-8">
              <div class="bg-white rounded-lg shadow-xl p-8">
                 <h2 class="text-2xl font-bold text-slate-800 mb-4 text-center">Timed Mode Leaderboard</h2>
                 <div id="leaderboard-loading" class="text-center text-slate-500">Loading...</div>
                 <ol id="leaderboard-list" class="space-y-3">
-                    <!-- Leaderboard entries will be injected here -->
-                </ol>
+                    </ol>
             </div>
         </div>
 
-        <!-- Version History -->
         <div class="w-full max-w-sm mx-auto mt-8">
             <div class="bg-white rounded-lg shadow-xl p-8 text-left">
                 <div class="space-y-4 text-slate-600">
@@ -133,12 +131,10 @@
         </div>
     </div>
 
-    <!-- Auth Modal -->
     <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white p-8 rounded-lg shadow-2xl text-left max-w-sm mx-4 w-full">
             <h2 id="modal-title" class="text-2xl font-bold text-slate-800 mb-4">Login</h2>
             
-            <!-- Email Verification Message -->
             <div id="email-verification-message" class="hidden text-center text-slate-700">
                 <p class="mb-4">A verification link has been sent to your email address. Please click the link to activate your account.</p>
                 <p>You may need to check your spam folder.</p>

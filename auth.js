@@ -4,8 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Import sendEmailVerification
-    const { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, writeBatch } = window.firebase;
+    // CHANGED: Imported 'applyActionCode' to handle email verification links.
+    const { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, applyActionCode, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot } = window.firebase;
 
     // --- DOM Elements ---
     const authModal = document.getElementById('auth-modal');
@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const authForm = document.getElementById('auth-form');
     const authError = document.getElementById('auth-error');
     const emailVerificationMessage = document.getElementById('email-verification-message');
+    const verificationMessageContainer = document.getElementById('verification-message-container'); // ADDED
 
     const loginModalBtn = document.getElementById('login-modal-btn');
     const signupModalBtn = document.getElementById('signup-modal-btn');
@@ -31,6 +32,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const leaderboardLoading = document.getElementById('leaderboard-loading');
 
     let isLoginMode = true;
+    
+    // --- ADDED: New function to handle email verification from URL ---
+    const handleEmailVerification = async (actionCode) => {
+        try {
+            await applyActionCode(auth, actionCode);
+            // Display a success message to the user.
+            verificationMessageContainer.innerHTML = `<p class="text-green-600 font-semibold">Verification successful! You can now log in.</p>`;
+            // Automatically open the login modal for a better user experience.
+            openModal(true); 
+        } catch (error) {
+            // Display an error message if the code is invalid or expired.
+            verificationMessageContainer.innerHTML = `<p class="text-red-500 font-semibold">Verification failed. The link may be expired or invalid. Please try signing in again to receive a new link.</p>`;
+            console.error("Email verification error:", error);
+        }
+    };
 
     // --- Function to process a pending score ---
     const processPendingScore = async (user) => {
@@ -50,8 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (score > currentHighScore) {
                     await setDoc(userDocRef, { highScore: score }, { merge: true });
                     userHighscoreEl.textContent = new Intl.NumberFormat().format(score);
-                    // Force a leaderboard refresh after setting a new high score
-                    fetchLeaderboard(true); 
                 }
             }
         } catch (error) {
@@ -142,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'auth/invalid-email':
                     authError.textContent = 'Please enter a valid email address.';
                     break;
-                case 'auth/too-many-request':
+                case 'auth/too-many-requests':
                     authError.textContent = 'Too many auth requests.';
                     break;
                 default:
@@ -179,48 +193,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Leaderboard Logic with Caching ---
-    const fetchLeaderboard = async (forceRefresh = false) => {
-        const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+    // --- Leaderboard Logic with Real-Time Listener ---
+    const listenForLeaderboardUpdates = () => {
         leaderboardLoading.style.display = 'block';
         leaderboardList.innerHTML = '';
-
-        const cachedLeaderboard = JSON.parse(localStorage.getItem('leaderboardCache'));
-
-        if (cachedLeaderboard && !forceRefresh) {
-            const isCacheValid = (new Date().getTime() - cachedLeaderboard.timestamp) < CACHE_DURATION;
-            if (isCacheValid) {
-                renderLeaderboard(cachedLeaderboard.data);
-                return;
-            }
-        }
 
         try {
             const usersRef = collection(db, "users");
             const q = query(usersRef, orderBy("highScore", "desc"), limit(15));
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                leaderboardLoading.textContent = "No scores yet. Be the first!";
-                return;
-            }
             
-            const leaderboardData = [];
-            querySnapshot.forEach(doc => {
-                 leaderboardData.push(doc.data());
+            onSnapshot(q, (querySnapshot) => {
+                if (querySnapshot.empty) {
+                    leaderboardLoading.textContent = "No scores yet. Be the first!";
+                    return;
+                }
+                
+                const leaderboardData = [];
+                querySnapshot.forEach(doc => {
+                     leaderboardData.push(doc.data());
+                });
+
+                renderLeaderboard(leaderboardData);
+            }, (error) => {
+                console.error("Error with leaderboard listener:", error);
+                leaderboardLoading.textContent = "Could not load leaderboard.";
             });
 
-            // Save to cache
-            const cacheData = {
-                timestamp: new Date().getTime(),
-                data: leaderboardData
-            };
-            localStorage.setItem('leaderboardCache', JSON.stringify(cacheData));
-
-            renderLeaderboard(leaderboardData);
-
         } catch (error) {
-            console.error("Error fetching leaderboard:", error);
+            console.error("Error setting up leaderboard listener:", error);
             leaderboardLoading.textContent = "Could not load leaderboard.";
         }
     };
@@ -244,5 +244,16 @@ document.addEventListener('DOMContentLoaded', () => {
         leaderboardLoading.style.display = 'none';
     };
 
-    fetchLeaderboard();
+    // --- Run on Page Load ---
+    
+    // ADDED: Check URL for verification links when the page loads.
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    const oobCode = params.get('oobCode');
+
+    if (mode === 'verifyEmail' && oobCode) {
+        handleEmailVerification(oobCode);
+    }
+    
+    listenForLeaderboardUpdates();
 });
