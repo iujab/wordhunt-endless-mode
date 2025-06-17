@@ -13,7 +13,49 @@
 </head>
 <body class="bg-slate-100">
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // Make sure to import sendEmailVerification
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC0LqycO4DZx89kPkQ3iI6C-K65U3C6Aog",
+            authDomain: "endlesswordhunt.firebaseapp.com",
+            projectId: "endlesswordhunt",
+            storageBucket: "endlesswordhunt.appspot.com",
+            messagingSenderId: "15556452050",
+            appId: "1:15556452050:web:9e918af139faf56a1b170b",
+            measurementId: "G-35NR49XGC4"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make all necessary functions globally available
+        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch };
+    </script>
+
+    <!-- Main Content -->
     <div class="flex flex-col items-center justify-center min-h-screen p-4">
+
+        <!-- Auth Status and Control -->
+        <div id="auth-container" class="absolute top-4 right-4 text-right">
+            <div id="user-info" class="hidden">
+                <p class="text-slate-600">Welcome, <span id="user-display-name" class="font-semibold"></span></p>
+                <p class="text-slate-600">High Score: <span id="user-highscore" class="font-semibold">0</span></p>
+                <button id="logout-btn" class="text-sm text-blue-600 hover:underline">Log Out</button>
+            </div>
+            <div id="auth-buttons">
+                <button id="login-modal-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Login</button>
+                <button id="signup-modal-btn" class="bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition">Sign Up</button>
+            </div>
+        </div>
 
         <div class="mb-4">
             <img src="icon.png" alt="Wordhunt Game Icon" class="w-24 h-24 rounded-lg shadow-lg">
@@ -21,7 +63,7 @@
 
         <div class="mb-8 w-full max-w-sm text-center">
             <p class="text-slate-500">
-                A modern rendition of Game Pigeon's Wordhunt. Relax and find all the words at your own pace in endless mode. Wordhunt all day all night!
+                A modern rendition of Game Pigeon's Wordhunt. Relax and play endlessly with infinite time in endless mode! Create an account to save your high score on timed mode!
             </p>
         </div>
 
@@ -35,7 +77,19 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- Leaderboard -->
+        <div id="leaderboard" class="w-full max-w-sm mx-auto mt-8">
+             <div class="bg-white rounded-lg shadow-xl p-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4 text-center">Timed Mode Leaderboard</h2>
+                <div id="leaderboard-loading" class="text-center text-slate-500">Loading...</div>
+                <ol id="leaderboard-list" class="space-y-3">
+                    <!-- Leaderboard entries will be injected here -->
+                </ol>
+            </div>
+        </div>
+
+        <!-- Version History -->
         <div class="w-full max-w-sm mx-auto mt-8">
             <div class="bg-white rounded-lg shadow-xl p-8 text-left">
                 <div class="space-y-4 text-slate-600">
@@ -45,6 +99,13 @@
                             <li>Improve/reduce word dictionary.</li>
                             <li>Improve board spawning algorithm (perhaps a minimum possible words limit).</li>
                             <li>Multiplayer, user profiles, ranking, and ELO.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-slate-700">v1.3: Jun 17, 2025</p>
+                        <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
+                            <li>Implemented user login</li>
+                            <li>Introduced leaderboard for timed-mode</li>
                         </ul>
                     </div>
                     <div>
@@ -71,9 +132,42 @@
                 </div>
             </div>
         </div>
-
     </div>
-    
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-lg shadow-2xl text-left max-w-sm mx-4 w-full">
+            <h2 id="modal-title" class="text-2xl font-bold text-slate-800 mb-4">Login</h2>
+            
+            <!-- Email Verification Message -->
+            <div id="email-verification-message" class="hidden text-center text-slate-700">
+                <p class="mb-4">A verification link has been sent to your email address. Please click the link to activate your account.</p>
+                <p>You may need to check your spam folder.</p>
+            </div>
+
+            <form id="auth-form">
+                <div id="username-field" class="mb-4 hidden">
+                    <label for="username" class="block text-slate-700 mb-1">Username</label>
+                    <input type="text" id="username" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" minlength="3" maxlength="15">
+                </div>
+                <div class="mb-4">
+                    <label for="email" class="block text-slate-700 mb-1">Email</label>
+                    <input type="email" id="email" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-slate-700 mb-1">Password</label>
+                    <input type="password" id="password" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required minlength="6">
+                </div>
+                <p id="auth-error" class="text-red-500 text-sm mb-4 hidden"></p>
+                <div class="flex justify-between items-center">
+                    <button type="submit" id="modal-submit-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition">Login</button>
+                    <button type="button" id="modal-close-btn" class="text-slate-500 hover:text-slate-700">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="landing.js"></script>
+    <script src="auth.js"></script>
 </body>
 </html>

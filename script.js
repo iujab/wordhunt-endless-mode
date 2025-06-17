@@ -69,11 +69,13 @@ async function initializeGame(mode) {
     if (gameMode === 'endless') {
         timerLabel.style.display = 'none';
         timerEl.innerHTML = '&infin;';
-        revealBtn.classList.remove('hidden');
-        newBoardBtn.classList.remove('hidden');
-        document.getElementById('words-list-container').style.display = 'block';
-        revealBtn.addEventListener('click', handleRevealAnswers);
-        newBoardBtn.addEventListener('click', () => handleNewBoard(false));
+        if (revealBtn) revealBtn.classList.remove('hidden');
+        if (newBoardBtn) newBoardBtn.classList.remove('hidden');
+        if (document.getElementById('words-list-container')) {
+             document.getElementById('words-list-container').style.display = 'block';
+        }
+        if (revealBtn) revealBtn.addEventListener('click', handleRevealAnswers);
+        if (newBoardBtn) newBoardBtn.addEventListener('click', () => handleNewBoard(false));
     } else {
         timerLabel.style.display = 'block';
         timerEl.textContent = GAME_DURATION;
@@ -99,9 +101,8 @@ function generateGrid() {
     }
 }
 
-// --- EDITED: renderGrid is now more robust to prevent duplicate boards ---
 function renderGrid() {
-    // Specifically find and remove all old tile elements
+    if (!gridContainer) return;
     gridContainer.querySelectorAll('.tile').forEach(tile => tile.remove());
 
     for (let i = 0; i < GRID_SIZE; i++) {
@@ -111,13 +112,13 @@ function renderGrid() {
             tile.dataset.row = i;
             tile.dataset.col = j;
             tile.className = 'tile bg-white rounded-lg flex items-center justify-center text-2xl sm:text-3xl font-bold text-slate-700 cursor-pointer select-none';
-            // Insert the new tile before the SVG element to keep it on top
             gridContainer.insertBefore(tile, traceSvg);
         }
     }
 }
 
 function generateTraceLattice() {
+    if (!traceSvg) return;
     traceSvg.innerHTML = '';
     const tileElements = Array.from(gridContainer.querySelectorAll('.tile'));
     if (tileElements.length === 0) return;
@@ -138,20 +139,16 @@ function generateTraceLattice() {
         for (let j = i + 1; j < tileCoords.length; j++) {
             const tileA = tileCoords[i];
             const tileB = tileCoords[j];
-
             const isAdjacent = Math.abs(tileA.row - tileB.row) <= 1 && Math.abs(tileA.col - tileB.col) <= 1;
-
             if (isAdjacent) {
                 const line = document.createElementNS(namespace, 'line');
                 line.setAttribute('x1', tileA.x);
                 line.setAttribute('y1', tileA.y);
                 line.setAttribute('x2', tileB.x);
                 line.setAttribute('y2', tileB.y);
-
                 const id1 = `tile-${tileA.row}-${tileA.col}`;
                 const id2 = `tile-${tileB.row}-${tileB.col}`;
                 line.id = [id1, id2].sort().join('--');
-
                 traceSvg.appendChild(line);
             }
         }
@@ -176,9 +173,23 @@ function endGame(message) {
     isPlaying = false;
     clearInterval(timerInterval);
     if (gameMode === 'timed') timerEl.textContent = '0';
+    
+    if (gameMode === 'timed') {
+        localStorage.setItem('lastTimedScore', score);
+    }
+
     messageText.textContent = message;
     messageScore.textContent = `Your final score is ${new Intl.NumberFormat().format(score)}.`;
-    messageOverlay.classList.remove('hidden');
+    
+    if (messageOverlay) messageOverlay.classList.remove('hidden');
+    
+    if (gameMode === 'timed') {
+        const playAgainBtn = document.getElementById('message-close-btn');
+        if (playAgainBtn) {
+            playAgainBtn.href = 'index.html';
+        }
+    }
+    
     removeEventListeners();
 }
 
@@ -199,6 +210,8 @@ function solveBoard() {
         }
         visited[row][col] = true;
         for (let i = -1; i <= 1; i++) {
+            // *** THIS IS THE FIX ***
+            // The inner loop must go from -1 to 1 to check all 8 directions.
             for (let j = -1; j <= 1; j++) {
                 if (i === 0 && j === 0) continue;
                 traverse(row + i, col + j, currentWord);
@@ -215,11 +228,10 @@ function solveBoard() {
 }
 
 function renderPossibleWords() {
+    if (!possibleWordsEl) return;
     possibleWordsEl.innerHTML = '';
     const sortedWords = Array.from(allPossibleWords).sort((a, b) => {
-        if (b.length !== a.length) {
-            return b.length - a.length;
-        }
+        if (b.length !== a.length) return b.length - a.length;
         return a.localeCompare(b);
     });
     sortedWords.forEach(word => {
@@ -233,6 +245,7 @@ function renderPossibleWords() {
 }
 
 function updateWordCount() {
+    if (!wordCountEl) return;
     wordCountEl.textContent = `${foundWords.size} / ${allPossibleWords.size}`;
 }
 
@@ -245,7 +258,7 @@ function handleRevealAnswers() {
         }
     });
     updateWordCount();
-    revealBtn.disabled = true;
+    if(revealBtn) revealBtn.disabled = true;
 }
 
 function handleNewBoard(isFirstTime = false) {
@@ -254,7 +267,7 @@ function handleNewBoard(isFirstTime = false) {
     score = 0;
     foundWords.clear();
     scoreEl.textContent = '0';
-    messageOverlay.classList.add('hidden');
+    if(messageOverlay) messageOverlay.classList.add('hidden');
 
     generateGrid();
     renderGrid();
@@ -264,7 +277,7 @@ function handleNewBoard(isFirstTime = false) {
 
     if (gameMode === 'endless') {
         renderPossibleWords();
-        revealBtn.disabled = false;
+        if(revealBtn) revealBtn.disabled = false;
     }
 
     resetSelection();
@@ -274,22 +287,12 @@ function updateScore(word) {
     let points = 0;
     const len = word.length;
     switch (len) {
-        case 3:
-            points = 100;
-            break;
-        case 4:
-            points = 400;
-            break;
-        case 5:
-            points = 800;
-            break;
-        case 6:
-            points = 1400;
-            break;
+        case 3: points = 100; break;
+        case 4: points = 400; break;
+        case 5: points = 800; break;
+        case 6: points = 1400; break;
         default:
-            if (len >= 7) {
-                points = 1400 + (len - 6) * 400;
-            }
+            if (len >= 7) points = 1400 + (len - 6) * 400;
             break;
     }
     score += points;
@@ -297,6 +300,7 @@ function updateScore(word) {
 }
 
 function revealWordInList(word) {
+    if (!possibleWordsEl) return;
     const wordEl = possibleWordsEl.querySelector(`[data-word="${word}"]`);
     if (wordEl) {
         wordEl.textContent = word;
@@ -305,8 +309,6 @@ function revealWordInList(word) {
     }
 }
 
-
-// --- Interaction Logic & Visual Feedback ---
 function updatePathColors() {
     const word = selectedTiles.map(t => t.textContent).join('').toUpperCase();
     let tileClass = 'potential';
@@ -347,7 +349,7 @@ function resetSelection() {
     selectedLines.forEach(line => line.classList.remove('potential', 'valid', 'invalid'));
     selectedTiles = [];
     selectedLines = [];
-    currentWordEl.textContent = '';
+    if (currentWordEl) currentWordEl.textContent = '';
 }
 
 function selectTile(tile) {
@@ -390,7 +392,7 @@ function handleInteractionMove(e) {
         const rect = element.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        const radius = (rect.width / 2) * 1; //We are just cutting corners
+        const radius = (rect.width / 2) * 1;
         const distance = Math.sqrt(Math.pow(clientX - centerX, 2) + Math.pow(clientY - centerY, 2));
 
         if (distance <= radius) {
@@ -438,21 +440,17 @@ function handleInteractionEnd(e) {
 }
 
 function addEventListeners() {
+    if (!gridContainer) return;
     gridContainer.addEventListener('mousedown', handleInteractionStart);
     gridContainer.addEventListener('mousemove', handleInteractionMove);
     window.addEventListener('mouseup', handleInteractionEnd);
-    gridContainer.addEventListener('touchstart', handleInteractionStart, {
-        passive: false
-    });
-    gridContainer.addEventListener('touchmove', handleInteractionMove, {
-        passive: false
-    });
-    window.addEventListener('touchend', handleInteractionEnd, {
-        passive: false
-    });
+    gridContainer.addEventListener('touchstart', handleInteractionStart, { passive: false });
+    gridContainer.addEventListener('touchmove', handleInteractionMove, { passive: false });
+    window.addEventListener('touchend', handleInteractionEnd, { passive: false });
 }
 
 function removeEventListeners() {
+    if (!gridContainer) return;
     gridContainer.removeEventListener('mousedown', handleInteractionStart);
     gridContainer.removeEventListener('mousemove', handleInteractionMove);
     window.removeEventListener('mouseup', handleInteractionEnd);
