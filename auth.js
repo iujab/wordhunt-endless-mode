@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     authError.textContent = 'Too many auth requests.';
                     break;
                 default:
-                    authError.textContent = 'An unexpected error occurred. Please try again.';
+                    authError.textContent = error.message || 'An unexpected error occurred. Please try again.';
                     break;
             }
             authError.classList.remove('hidden');
