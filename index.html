@@ -11,12 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-100">
+<body class="">
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // CHANGED: Imported 'applyActionCode'
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, applyActionCode } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // REMOVED: sendEmailVerification and applyActionCode as they are no longer needed
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
@@ -36,17 +36,17 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Make all necessary functions globally available
-        // CHANGED: Added 'applyActionCode' to the global window object.
-        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, applyActionCode, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot };
+        // Make necessary functions globally available
+        // REMOVED: sendEmailVerification and applyActionCode from the global window object
+        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot };
     </script>
 
     <div class="relative flex flex-col items-center justify-center min-h-screen p-4">
 
         <div id="auth-container" class="absolute top-4 right-4 text-right">
             <div id="user-info" class="hidden">
-                <p class="text-slate-600">Welcome, <span id="user-display-name" class="font-semibold"></span></p>
-                <p class="text-slate-600">High Score: <span id="user-highscore" class="font-semibold">0</span></p>
+                <p class="text-black">Welcome, <span id="user-display-name" class="font-semibold"></span></p>
+                <p class="text-black">High Score: <span id="user-highscore" class="font-semibold">0</span></p>
                 <button id="logout-btn" class="text-sm text-blue-600 hover:underline">Log Out</button>
             </div>
             <div id="auth-buttons">
@@ -55,22 +55,20 @@
             </div>
         </div>
         
-        <div id="verification-message-container" class="w-full max-w-sm text-center mb-4"></div>
-
         <div class="mt-20 md:mt-0 mb-4">
-            <img src="icon.png" alt="Wordhunt Game Icon" class="w-24 h-24 rounded-lg shadow-lg">
+            <img src="favicon.png" alt="Wordhunt Game Icon" class="w-24 h-24 rounded-lg shadow-lg">
         </div>
 
         <div class="mb-8 w-full max-w-sm text-center">
-            <p class="text-slate-500">
+            <p class="text-black">
                 A modern rendition of Game Pigeon's Wordhunt. Relax and play endlessly with infinite time in endless mode! Create an account to save your high score on timed mode!
             </p>
         </div>
 
         <div id="mode-selection" class="w-full max-w-sm mx-auto text-center">
-            <div class="bg-white rounded-lg shadow-xl p-8">
-                <h1 class="text-4xl font-bold text-slate-800 mb-2">Endless Wordhunt</h1>
-                <p id="loading-text" class="text-slate-600 mb-8">Select a Game Mode</p>
+             <div class="bg-[#84a98c] rounded-lg shadow-xl p-8">
+                <h1 class="text-4xl font-bold text-white mb-2">Endless Wordhunt</h1>
+                <p id="loading-text" class="text-white mb-8">Select a Game Mode</p>
                 <div id="mode-buttons" class="space-y-4">
                     <a href="timed.html" id="timed-mode-btn" class="block w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md text-lg">Timed Mode</a>
                     <a href="endless.html" id="endless-mode-btn" class="block w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-700 transition duration-300 shadow-md text-lg">Endless Mode</a>
@@ -79,41 +77,48 @@
         </div>
 
         <div id="leaderboard" class="w-full max-w-sm mx-auto mt-8">
-             <div class="bg-white rounded-lg shadow-xl p-8">
-                <h2 class="text-2xl font-bold text-slate-800 mb-4 text-center">Timed Mode Leaderboard</h2>
-                <div id="leaderboard-loading" class="text-center text-slate-500">Loading...</div>
+             <div class="bg-[#84a98c] rounded-lg shadow-xl p-8">
+                <h2 class="text-2xl font-bold text-white mb-4 text-center">Timed Mode Leaderboard</h2>
+                <div id="leaderboard-loading" class="text-center text-white">Loading...</div>
                 <ol id="leaderboard-list" class="space-y-3">
                     </ol>
             </div>
         </div>
 
         <div class="w-full max-w-sm mx-auto mt-8">
-            <div class="bg-white rounded-lg shadow-xl p-8 text-left">
-                <div class="space-y-4 text-slate-600">
+             <div class="bg-[#84a98c] rounded-lg shadow-xl p-8 text-left">
+                <div class="space-y-4 text-white">
                     <div>
-                        <p class="font-semibold text-slate-700">TODO:</p>
+                        <p class="font-semibold">TODO:</p>
                         <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
                             <li>Improve/reduce word dictionary.</li>
-                            <li>Improve board spawning algorithm (perhaps a minimum possible words limit).</li>
                             <li>Multiplayer, user profiles, ranking, and ELO.</li>
                         </ul>
                     </div>
                     <div>
-                        <p class="font-semibold text-slate-700">v1.3: Jun 17, 2025</p>
+                        <p class="font-semibold">v1.4: Jun 20, 2025</p>
+                        <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
+                            <li>Changed website styling</li>
+                            <li>Greatly increased word spawn rate</li>
+                            <li>Removed email verification requirement</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p class="font-semibold">v1.3: Jun 17, 2025</p>
                         <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
                             <li>Implemented user login</li>
                             <li>Introduced leaderboard for timed-mode</li>
                         </ul>
                     </div>
-                    <div>
-                        <p class="font-semibold text-slate-700">v1.2: Jun 14, 2025</p>
+                     <div>
+                        <p class="font-semibold">v1.2: Jun 14, 2025</p>
                         <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
                             <li>Slightly increased the size of letter hitboxes.</li>
                             <li>Implemented letter tracing.</li>
                         </ul>
                     </div>
                     <div>
-                        <p class="font-semibold text-slate-700">v1.1: Jun 13, 2025</p>
+                        <p class="font-semibold">v1.1: Jun 13, 2025</p>
                         <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
                             <li>Adjusted page layout.</li>
                             <li>Vastly improved word dictionary.</li>
@@ -121,7 +126,7 @@
                         </ul>
                     </div>
                     <div>
-                        <p class="font-semibold text-slate-700">v1.0: Jun 12, 2025</p>
+                        <p class="font-semibold">v1.0: Jun 12, 2025</p>
                         <ul class="list-disc list-inside mt-1 space-y-1 text-sm">
                             <li>Site launched.</li>
                         </ul>
@@ -135,28 +140,19 @@
         <div class="bg-white p-8 rounded-lg shadow-2xl text-left max-w-sm mx-4 w-full">
             <h2 id="modal-title" class="text-2xl font-bold text-slate-800 mb-4">Login</h2>
             
-            <div id="email-verification-message" class="hidden text-center text-slate-700">
-                <p class="mb-4">A verification link has been sent to your email address. Please click the link to activate your account.</p>
-                <p>You may need to check your spam folder.</p>
-            </div>
-
             <form id="auth-form">
-                <div id="username-field" class="mb-4 hidden">
-                    <label for="username" class="block text-slate-700 mb-1">Username</label>
-                    <input type="text" id="username" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" minlength="3" maxlength="15">
-                </div>
-                <div class="mb-4">
-                    <label for="email" class="block text-slate-700 mb-1">Email</label>
-                    <input type="email" id="email" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required>
+                <div id="username-field" class="mb-4">
+                    <label for="username" class="block text-black mb-1">Username</label>
+                    <input type="text" id="username" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required minlength="3" maxlength="15">
                 </div>
                 <div class="mb-6">
-                    <label for="password" class="block text-slate-700 mb-1">Password</label>
+                    <label for="password" class="block text-black mb-1">Password</label>
                     <input type="password" id="password" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required minlength="6">
                 </div>
                 <p id="auth-error" class="text-red-500 text-sm mb-4 hidden"></p>
                 <div class="flex justify-between items-center">
                     <button type="submit" id="modal-submit-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition">Login</button>
-                    <button type="button" id="modal-close-btn" class="text-slate-500 hover:text-slate-700">Cancel</button>
+                    <button type="button" id="modal-close-btn" class="text-black hover:text-gray-700">Cancel</button>
                 </div>
             </form>
         </div>

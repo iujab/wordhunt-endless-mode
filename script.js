@@ -17,63 +17,73 @@ const messageOverlay = document.getElementById('message-overlay');
 const messageText = document.getElementById('message-text');
 const messageScore = document.getElementById('message-score');
 
-// --- Game Configuration & State ---
+// --- Constants & Configuration ---
 const GRID_SIZE = 4;
 const GAME_DURATION = 90;
 const CUSTOM_DICE = [
-    "AEIOUY", "AHMNRS", "BCDFGK", "EILPST", "EKLNXZ", "EFGHIJ",
-    "ADENOV", "WFLRTV", "CIMPQU", "GHJOTW", "BKNOPZ", "CDLMSY",
-    "ABDEGT", "IJKSUV", "OPRTUX", "XYZVWB"
+    "AEIOUY","AHMNRS","EILPST","EILPST","EKLNXY","EFGHIJ",
+    "ADENOV","WFLRTV","CIMPQU","GHJOTW","BKNOPZ","CDLMSY",
+    "EBDEGT","IJKSUV","OPRTUX","AEIOUN","AEIOUE","EERLST",
+    "THNDSO","BINGES","CRANES","PEOELE","LEEEEK","ERGAIL"
 ];
+const RICH_BOARD_ATTEMPTS = 5; // Increased attempts for even better boards
+const DIRECTIONS = [
+    [-1,-1],[-1,0],[-1,1],
+    [0,-1],       [0,1],
+    [1,-1], [1,0], [1,1]
+];
+
+// --- Game State ---
 let DICTIONARY = new Set();
-let PREFIXES = new Set();
-let grid = [];
-let score = 0;
-let timer = GAME_DURATION;
+let PREFIXES   = new Set();
+let grid       = [];
+let score      = 0;
+let timer      = GAME_DURATION;
 let timerInterval = null;
-let gameMode = '';
+let gameMode   = '';
 let allPossibleWords = new Set();
 let foundWords = new Set();
-let isPlaying = false;
+let isPlaying  = false;
 let isDragging = false;
 let selectedTiles = [];
 let selectedLines = [];
 
-// --- Dictionary & Game Initialization ---
+// --- Dictionary Initialization ---
 async function initializeDictionary() {
     try {
-        const response = await fetch('./words_dictionary.json');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const wordObject = await response.json();
-        const wordList = Object.keys(wordObject).map(word => word.toUpperCase());
-        DICTIONARY = new Set(wordList);
-        PREFIXES = new Set();
-        for (const word of DICTIONARY) {
-            for (let i = 1; i < word.length; i++) {
-                PREFIXES.add(word.substring(0, i));
+        const resp = await fetch('./words_dictionary.json');
+        if (!resp.ok) throw new Error(`status ${resp.status}`);
+        const obj = await resp.json();
+        DICTIONARY = new Set(Object.keys(obj).map(w => w.toUpperCase()));
+        PREFIXES.clear();
+        DICTIONARY.forEach(w => {
+            for (let i = 1; i < w.length; i++) {
+                PREFIXES.add(w.substring(0, i));
             }
-        }
+        });
         return true;
-    } catch (error) {
-        console.error("Could not load dictionary:", error);
-        if (gameContainer) gameContainer.innerHTML = `<div class="text-red-500 p-4">Error: Could not load dictionary. Please check the file path and ensure it's a valid JSON.</div>`;
+    } catch (err) {
+        console.error("Could not load dictionary:", err);
+        if (gameContainer) {
+            gameContainer.innerHTML = `<div class="text-red-500 p-4">Error loading dictionary. Check path and JSON.</div>`;
+        }
         return false;
     }
 }
 
+// --- Game Initialization ---
 async function initializeGame(mode) {
-    const dictionaryLoaded = await initializeDictionary();
-    if (!dictionaryLoaded) return;
+    if (!(await initializeDictionary())) return;
     gameMode = mode;
     isPlaying = true;
+
     if (gameMode === 'endless') {
         timerLabel.style.display = 'none';
         timerEl.innerHTML = '&infin;';
         if (revealBtn) revealBtn.classList.remove('hidden');
         if (newBoardBtn) newBoardBtn.classList.remove('hidden');
-        if (document.getElementById('words-list-container')) {
-             document.getElementById('words-list-container').style.display = 'block';
-        }
+        const wc = document.getElementById('words-list-container');
+        if (wc) wc.style.display = 'block';
         if (revealBtn) revealBtn.addEventListener('click', handleRevealAnswers);
         if (newBoardBtn) newBoardBtn.addEventListener('click', () => handleNewBoard(false));
     } else {
@@ -81,166 +91,159 @@ async function initializeGame(mode) {
         timerEl.textContent = GAME_DURATION;
         startTimer();
     }
+
     handleNewBoard(true);
     addEventListeners();
 }
 
-// --- Core Game Logic ---
+// --- Grid & Tracing ---
 function generateGrid() {
     grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(''));
-    let tempDice = [...CUSTOM_DICE];
-    for (let i = tempDice.length - 1; i > 0; i--) {
+    const dice = [...CUSTOM_DICE];
+    for (let i = dice.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [tempDice[i], tempDice[j]] = [tempDice[j], tempDice[i]];
+        [dice[i], dice[j]] = [dice[j], dice[i]];
     }
-    for (let i = 0; i < GRID_SIZE; i++) {
-        for (let j = 0; j < GRID_SIZE; j++) {
-            const die = tempDice[i * GRID_SIZE + j];
-            grid[i][j] = die[Math.floor(Math.random() * die.length)];
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            const die = dice[r * GRID_SIZE + c];
+            grid[r][c] = die[Math.floor(Math.random() * die.length)];
         }
     }
 }
 
 function renderGrid() {
     if (!gridContainer) return;
-    gridContainer.querySelectorAll('.tile').forEach(tile => tile.remove());
-
-    for (let i = 0; i < GRID_SIZE; i++) {
-        for (let j = 0; j < GRID_SIZE; j++) {
+    gridContainer.querySelectorAll('.tile').forEach(t => t.remove());
+    const frag = document.createDocumentFragment();
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
             const tile = document.createElement('div');
-            tile.textContent = grid[i][j];
-            tile.dataset.row = i;
-            tile.dataset.col = j;
-            tile.className = 'tile bg-white rounded-lg flex items-center justify-center text-2xl sm:text-3xl font-bold text-slate-700 cursor-pointer select-none';
-            gridContainer.insertBefore(tile, traceSvg);
+            tile.textContent = grid[r][c];
+            tile.dataset.row = r;
+            tile.dataset.col = c;
+            tile.className = 'tile rounded-lg flex items-center justify-center text-2xl sm:text-3xl font-bold text-black cursor-pointer select-none';
+            frag.appendChild(tile);
         }
     }
+    gridContainer.insertBefore(frag, traceSvg);
 }
 
+// OPTIMIZED: Calculates and stores tile center coords for faster access during move events.
 function generateTraceLattice() {
     if (!traceSvg) return;
     traceSvg.innerHTML = '';
-    const tileElements = Array.from(gridContainer.querySelectorAll('.tile'));
-    if (tileElements.length === 0) return;
+    const tiles = Array.from(gridContainer.querySelectorAll('.tile'));
+    if (!tiles.length) return;
 
-    const tileCoords = tileElements.map(tile => {
+    const contRect = gridContainer.getBoundingClientRect();
+    const coords = tiles.map(tile => {
         const rect = tile.getBoundingClientRect();
-        const containerRect = gridContainer.getBoundingClientRect();
+        const centerX = rect.left - contRect.left + rect.width / 2;
+        const centerY = rect.top - contRect.top + rect.height / 2;
+        tile.dataset.centerX = centerX; // Store center X
+        tile.dataset.centerY = centerY; // Store center Y
         return {
-            row: parseInt(tile.dataset.row),
-            col: parseInt(tile.dataset.col),
-            x: rect.left - containerRect.left + rect.width / 2,
-            y: rect.top - containerRect.top + rect.height / 2,
+            row: +tile.dataset.row, col: +tile.dataset.col,
+            x: centerX, y: centerY
         };
     });
 
-    const namespace = "http://www.w3.org/2000/svg";
-    for (let i = 0; i < tileCoords.length; i++) {
-        for (let j = i + 1; j < tileCoords.length; j++) {
-            const tileA = tileCoords[i];
-            const tileB = tileCoords[j];
-            const isAdjacent = Math.abs(tileA.row - tileB.row) <= 1 && Math.abs(tileA.col - tileB.col) <= 1;
-            if (isAdjacent) {
-                const line = document.createElementNS(namespace, 'line');
-                line.setAttribute('x1', tileA.x);
-                line.setAttribute('y1', tileA.y);
-                line.setAttribute('x2', tileB.x);
-                line.setAttribute('y2', tileB.y);
-                const id1 = `tile-${tileA.row}-${tileA.col}`;
-                const id2 = `tile-${tileB.row}-${tileB.col}`;
-                line.id = [id1, id2].sort().join('--');
-                traceSvg.appendChild(line);
+    const ns = "http://www.w3.org/2000/svg";
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < coords.length; i++) {
+        for (let j = i + 1; j < coords.length; j++) {
+            const a = coords[i], b = coords[j];
+            if (Math.abs(a.row - b.row) <= 1 && Math.abs(a.col - b.col) <= 1) {
+                const line = document.createElementNS(ns, 'line');
+                line.setAttribute('x1', a.x);
+                line.setAttribute('y1', a.y);
+                line.setAttribute('x2', b.x);
+                line.setAttribute('y2', b.y);
+                line.id = [`tile-${a.row}-${a.col}`, `tile-${b.row}-${b.col}`].sort().join('--');
+                frag.appendChild(line);
             }
         }
     }
+    traceSvg.appendChild(frag);
 }
 
+
+// --- Timer ---
 function startTimer() {
     if (gameMode !== 'timed') return;
+    clearInterval(timerInterval);
     timer = GAME_DURATION;
     timerEl.textContent = timer;
-    clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         timer--;
         timerEl.textContent = timer;
-        if (timer <= 0) {
-            endGame("Time's Up!");
-        }
+        if (timer <= 0) endGame("Time's Up!");
     }, 1000);
 }
 
+// --- End Game ---
 function endGame(message) {
     isPlaying = false;
     clearInterval(timerInterval);
-    if (gameMode === 'timed') timerEl.textContent = '0';
-    
     if (gameMode === 'timed') {
+        timerEl.textContent = '0';
         localStorage.setItem('lastTimedScore', score);
     }
-
     messageText.textContent = message;
     messageScore.textContent = `Your final score is ${new Intl.NumberFormat().format(score)}.`;
-    
     if (messageOverlay) messageOverlay.classList.remove('hidden');
-    
-    if (gameMode === 'timed') {
-        const playAgainBtn = document.getElementById('message-close-btn');
-        if (playAgainBtn) {
-            playAgainBtn.href = 'index.html';
-        }
-    }
-    
     removeEventListeners();
 }
 
-function solveBoard() {
-    allPossibleWords.clear();
+// --- Solving ---
+// OPTIMIZED: The visited grid is passed by reference, avoiding potential overhead.
+function solveBoard(currentGrid) {
+    const found = new Set();
     const visited = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(false));
-
-    function traverse(row, col, currentWord) {
-        if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE || visited[row][col]) {
-            return;
+    
+    function dfs(r, c, w) {
+        if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE || visited[r][c]) return;
+        
+        w += currentGrid[r][c];
+        
+        if (!PREFIXES.has(w) && !DICTIONARY.has(w)) return;
+        
+        if (w.length >= 3 && DICTIONARY.has(w)) {
+            found.add(w);
         }
-        currentWord += grid[row][col];
-        if (!PREFIXES.has(currentWord) && !DICTIONARY.has(currentWord)) {
-            return;
+        
+        visited[r][c] = true;
+        for (const [dr, dc] of DIRECTIONS) {
+            dfs(r + dr, c + dc, w);
         }
-        if (currentWord.length >= 3 && DICTIONARY.has(currentWord)) {
-            allPossibleWords.add(currentWord);
-        }
-        visited[row][col] = true;
-        for (let i = -1; i <= 1; i++) {
-            // *** THIS IS THE FIX ***
-            // The inner loop must go from -1 to 1 to check all 8 directions.
-            for (let j = -1; j <= 1; j++) {
-                if (i === 0 && j === 0) continue;
-                traverse(row + i, col + j, currentWord);
-            }
-        }
-        visited[row][col] = false;
+        visited[r][c] = false; // backtrack
     }
-
-    for (let i = 0; i < GRID_SIZE; i++) {
-        for (let j = 0; j < GRID_SIZE; j++) {
-            traverse(i, j, "");
+    
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            dfs(r, c, "");
         }
     }
+    return found;
 }
 
+
+// --- Word List & Count ---
 function renderPossibleWords() {
     if (!possibleWordsEl) return;
     possibleWordsEl.innerHTML = '';
-    const sortedWords = Array.from(allPossibleWords).sort((a, b) => {
-        if (b.length !== a.length) return b.length - a.length;
-        return a.localeCompare(b);
-    });
-    sortedWords.forEach(word => {
-        const wordDiv = document.createElement('div');
-        wordDiv.dataset.word = word;
-        wordDiv.className = 'word-placeholder';
-        wordDiv.textContent = '_ '.repeat(word.length);
-        possibleWordsEl.appendChild(wordDiv);
-    });
+    const frag = document.createDocumentFragment();
+    Array.from(allPossibleWords)
+      .sort((a,b) => b.length - a.length || a.localeCompare(b))
+      .forEach(w => {
+        const d = document.createElement('div');
+        d.dataset.word = w;
+        d.className = 'word-placeholder';
+        d.textContent = '_ '.repeat(w.length);
+        frag.appendChild(d);
+      });
+    possibleWordsEl.appendChild(frag);
     updateWordCount();
 }
 
@@ -249,127 +252,131 @@ function updateWordCount() {
     wordCountEl.textContent = `${foundWords.size} / ${allPossibleWords.size}`;
 }
 
+// --- Reveal Answers ---
 function handleRevealAnswers() {
-    allPossibleWords.forEach(word => {
-        if (!foundWords.has(word)) {
-            foundWords.add(word);
-            updateScore(word);
-            revealWordInList(word);
-        }
+    allPossibleWords.forEach(w => {
+      if (!foundWords.has(w)) {
+        foundWords.add(w);
+        updateScore(w);
+        revealWordInList(w);
+      }
     });
     updateWordCount();
-    if(revealBtn) revealBtn.disabled = true;
+    if (revealBtn) revealBtn.disabled = true;
 }
 
+// --- New Board (rich) ---
 function handleNewBoard(isFirstTime = false) {
     if (gameMode === 'timed' && !isFirstTime) return;
-
     score = 0;
     foundWords.clear();
-    scoreEl.textContent = '0';
-    if(messageOverlay) messageOverlay.classList.add('hidden');
+    if (scoreEl) scoreEl.textContent = '0';
+    if (messageOverlay) messageOverlay.classList.add('hidden');
 
-    generateGrid();
+    let bestGrid = null;
+    let bestWords = new Set();
+
+    for (let i = 0; i < RICH_BOARD_ATTEMPTS; i++) {
+        generateGrid();
+        const currentWords = solveBoard(grid);
+        if (currentWords.size > bestWords.size) {
+            bestWords = currentWords;
+            bestGrid = grid.map(row => [...row]);
+        }
+    }
+    
+    grid = bestGrid || grid;
+    allPossibleWords = bestWords;
+
     renderGrid();
-    solveBoard();
-
-    setTimeout(generateTraceLattice, 50);
+    setTimeout(generateTraceLattice, 50); // Use timeout to ensure DOM is updated
 
     if (gameMode === 'endless') {
         renderPossibleWords();
-        if(revealBtn) revealBtn.disabled = false;
+        if (revealBtn) revealBtn.disabled = false;
     }
-
     resetSelection();
 }
 
+// --- Scoring & Reveal ---
 function updateScore(word) {
-    let points = 0;
-    const len = word.length;
-    switch (len) {
-        case 3: points = 100; break;
-        case 4: points = 400; break;
-        case 5: points = 800; break;
-        case 6: points = 1400; break;
-        default:
-            if (len >= 7) points = 1400 + (len - 6) * 400;
-            break;
-    }
-    score += points;
-    scoreEl.textContent = new Intl.NumberFormat().format(score);
+    let pts = 0, L = word.length;
+    if (L === 3) pts = 100;
+    else if (L === 4) pts = 400;
+    else if (L === 5) pts = 800;
+    else if (L === 6) pts = 1400;
+    else if (L >= 7) pts = 1400 + (L - 6) * 400; //just add 400 per letter going on from here
+    score += pts;
+    if (scoreEl) scoreEl.textContent = new Intl.NumberFormat().format(score);
 }
 
 function revealWordInList(word) {
     if (!possibleWordsEl) return;
-    const wordEl = possibleWordsEl.querySelector(`[data-word="${word}"]`);
-    if (wordEl) {
-        wordEl.textContent = word;
-        wordEl.classList.remove('word-placeholder');
-        wordEl.classList.add('word-found');
+    const el = possibleWordsEl.querySelector(`[data-word="${word}"]`);
+    if (el) {
+        el.textContent = word;
+        el.classList.remove('word-placeholder');
+        el.classList.add('word-found');
     }
 }
 
+// --- Path Coloring & Flash ---
 function updatePathColors() {
-    const word = selectedTiles.map(t => t.textContent).join('').toUpperCase();
-    let tileClass = 'potential';
-    let lineClass = 'potential';
+    const w = selectedTiles.map(t => t.textContent).join('').toUpperCase();
+    const isValid = allPossibleWords.has(w) && !foundWords.has(w);
+    const tileClass = isValid ? 'valid' : 'potential';
 
-    if (allPossibleWords.has(word) && !foundWords.has(word)) {
-        tileClass = 'valid';
-        lineClass = 'valid';
-    }
-
-    document.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('potential', 'valid'));
-    selectedTiles.forEach(tile => tile.classList.add(tileClass));
-
-    selectedLines.forEach(line => {
-        line.classList.remove('potential', 'valid');
-        line.classList.add(lineClass);
+    selectedTiles.forEach(t => {
+      t.classList.remove('potential','valid');
+      t.classList.add(tileClass);
+    });
+    selectedLines.forEach(l => {
+      l.classList.remove('potential','valid');
+      l.classList.add(tileClass);
     });
 }
 
-function flashInvalidPath(tilesToFlash, linesToFlash) {
-    tilesToFlash.forEach(tile => {
-        tile.classList.remove('potential', 'valid', 'selected');
-        tile.classList.add('invalid');
+function flashInvalidPath(tiles, lines) {
+    tiles.forEach(t => {
+      t.classList.remove('potential','valid','selected');
+      t.classList.add('invalid');
     });
-    linesToFlash.forEach(line => {
-        line.classList.remove('potential', 'valid');
-        line.classList.add('invalid');
+    lines.forEach(l => {
+      l.classList.remove('potential','valid');
+      l.classList.add('invalid');
     });
-
     setTimeout(() => {
-        tilesToFlash.forEach(tile => tile.classList.remove('invalid'));
-        linesToFlash.forEach(line => line.classList.remove('invalid'));
+      tiles.forEach(t => t.classList.remove('invalid'));
+      lines.forEach(l => l.classList.remove('invalid'));
     }, 300);
 }
 
+// --- Selection Reset ---
 function resetSelection() {
-    selectedTiles.forEach(tile => tile.classList.remove('selected', 'potential', 'valid', 'invalid'));
-    selectedLines.forEach(line => line.classList.remove('potential', 'valid', 'invalid'));
+    selectedTiles.forEach(t => t.classList.remove('selected','potential','valid','invalid'));
+    selectedLines.forEach(l => l.classList.remove('potential','valid','invalid'));
     selectedTiles = [];
     selectedLines = [];
     if (currentWordEl) currentWordEl.textContent = '';
 }
 
+// --- Tile Selection ---
 function selectTile(tile) {
     if (selectedTiles.length > 0) {
-        const prevTile = selectedTiles[selectedTiles.length - 1];
-        const id1 = `tile-${prevTile.dataset.row}-${prevTile.dataset.col}`;
-        const id2 = `tile-${tile.dataset.row}-${tile.dataset.col}`;
-        const lineId = [id1, id2].sort().join('--');
-        const line = document.getElementById(lineId);
-        if (line) {
-            selectedLines.push(line);
-        }
+        const prev = selectedTiles[selectedTiles.length - 1];
+        const id = [`tile-${prev.dataset.row}-${prev.dataset.col}`, `tile-${tile.dataset.row}-${tile.dataset.col}`].sort().join('--');
+        const ln = document.getElementById(id);
+        if (ln) selectedLines.push(ln);
     }
-
     tile.classList.add('selected');
     selectedTiles.push(tile);
-    currentWordEl.textContent = selectedTiles.map(t => t.textContent).join('');
+    if (currentWordEl) {
+      currentWordEl.textContent = selectedTiles.map(t => t.textContent).join('');
+    }
     updatePathColors();
 }
 
+// --- Interaction Handlers ---
 function handleInteractionStart(e) {
     if (!isPlaying) return;
     e.preventDefault();
@@ -384,43 +391,43 @@ function handleInteractionStart(e) {
 function handleInteractionMove(e) {
     if (!isDragging || !isPlaying) return;
     e.preventDefault();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const element = document.elementFromPoint(clientX, clientY);
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+    const el = document.elementFromPoint(x, y);
 
-    if (element && element.classList.contains('tile') && !selectedTiles.includes(element)) {
-        const rect = element.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const radius = (rect.width / 2) * 1;
-        const distance = Math.sqrt(Math.pow(clientX - centerX, 2) + Math.pow(clientY - centerY, 2));
+    if (!el || !el.classList.contains('tile') || selectedTiles.includes(el)) return;
+    
+    // OPTIMIZED: Uses pre-calculated center coordinates from the element's dataset.
+    const centerX = +el.dataset.centerX;
+    const centerY = +el.dataset.centerY;
+    const rect = el.getBoundingClientRect(); // Still need this for width
+    const contRect = gridContainer.getBoundingClientRect();
 
-        if (distance <= radius) {
-            const lastTile = selectedTiles[selectedTiles.length - 1];
-            const lastRow = parseInt(lastTile.dataset.row);
-            const lastCol = parseInt(lastTile.dataset.col);
-            const currentRow = parseInt(element.dataset.row);
-            const currentCol = parseInt(element.dataset.col);
-            const isAdjacent = Math.abs(currentRow - lastRow) <= 1 && Math.abs(currentCol - lastCol) <= 1;
-            if (isAdjacent) {
-                selectTile(element);
-            }
+    const dx = (x - contRect.left) - centerX;
+    const dy = (y - contRect.top) - centerY;
+    const rad = rect.width / 2;
+
+    if (dx * dx + dy * dy <= rad * rad) {
+        const last = selectedTiles[selectedTiles.length - 1];
+        if (Math.abs(+el.dataset.row - +last.dataset.row) <= 1 && Math.abs(+el.dataset.col - +last.dataset.col) <= 1) {
+            selectTile(el);
         }
     }
 }
 
+// OPTIMIZED: Restructured with guard clauses for clarity.
 function handleInteractionEnd(e) {
     if (!isDragging || !isPlaying) return;
     e.preventDefault();
 
-    const word = selectedTiles.map(tile => tile.textContent).join('').toUpperCase();
-    const tilesToProcess = [...selectedTiles];
-    const linesToProcess = [...selectedLines];
+    const word = selectedTiles.map(t => t.textContent).join('').toUpperCase();
+    const tilesInPath = [...selectedTiles];
+    const linesInPath = [...selectedLines];
 
     isDragging = false;
     resetSelection();
 
-    if (tilesToProcess.length === 0) return;
+    if (tilesInPath.length < 3) return; // Guard against words that are too short
 
     const isAWord = allPossibleWords.has(word);
     const isAlreadyFound = foundWords.has(word);
@@ -432,21 +439,20 @@ function handleInteractionEnd(e) {
             revealWordInList(word);
             updateWordCount();
         }
-    } else if (isAWord && isAlreadyFound) {
-        // Do nothing.
-    } else if (tilesToProcess.length > 0) {
-        flashInvalidPath(tilesToProcess, linesToProcess);
+    } else if (!isAWord) {
+        flashInvalidPath(tilesInPath, linesInPath);
     }
 }
 
+// --- Event Listeners ---
 function addEventListeners() {
     if (!gridContainer) return;
     gridContainer.addEventListener('mousedown', handleInteractionStart);
     gridContainer.addEventListener('mousemove', handleInteractionMove);
     window.addEventListener('mouseup', handleInteractionEnd);
-    gridContainer.addEventListener('touchstart', handleInteractionStart, { passive: false });
-    gridContainer.addEventListener('touchmove', handleInteractionMove, { passive: false });
-    window.addEventListener('touchend', handleInteractionEnd, { passive: false });
+    gridContainer.addEventListener('touchstart', handleInteractionStart, {passive:false});
+    gridContainer.addEventListener('touchmove', handleInteractionMove, {passive:false});
+    window.addEventListener('touchend', handleInteractionEnd, {passive:false});
 }
 
 function removeEventListeners() {

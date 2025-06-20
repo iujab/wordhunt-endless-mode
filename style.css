@@ -1,6 +1,19 @@
+:root {
+    --bg-main: #e8f5e9;       /* Light Pastel Green */
+    --bg-content: #1e3324;    /* Darker Pastel Green */
+    --bg-tile: #f5f5dc;       /* Beige */
+    --text-dark: #1e3324;     /* Dark, earthy green for text */
+    --text-light: #f5f5dc;    /* Beige text for dark backgrounds */
+    --accent: #81c784;       /* A slightly brighter green for buttons/accents */
+    --accent-hover: #66bb6a;  /* A punchier green for hover */
+    --border-color: #c8e6c9; /* A light border color */
+}
+
+
 /* General body styling from Google Fonts */
 body {
     font-family: 'Inter', sans-serif;
+    background-color: var(--bg-main);
 }
 
 /* Prevents page scrolling ONLY when interacting with the grid */
@@ -20,6 +33,7 @@ body {
     transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out, transform 0.1s ease-in-out;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     border: 2px solid transparent; /* Add a transparent border to reserve space */
+    background-color: var(--bg-tile);
 }
 
 /* SVG Line Styling */
@@ -69,13 +83,13 @@ body {
 /* Styling for the placeholders in the 'Possible Words' list */
 .word-placeholder {
     letter-spacing: 0.2em;
-    color: #cbd5e1; /* Tailwind's slate-300 */
+    color: white;
 }
 
 /* Styling for a word in the list that the user has successfully found */
 .word-found {
     letter-spacing: normal;
-    color: #1e293b; /* Tailwind's slate-800 */
+    color: white;
     font-weight: 600;
     text-transform: uppercase;
 }
@@ -89,11 +103,11 @@ body {
     border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #94a3b8; /* Tailwind's slate-400 */
+    background: #64748b; /* Tailwind's slate-500 */
     border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #64748b; /* Tailwind's slate-500 */
+    background: #374151;
 }
 
 /* Styling for disabled buttons */
