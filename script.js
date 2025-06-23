@@ -24,9 +24,9 @@ const CUSTOM_DICE = [
     "AEIOUY","AHMNRS","EILPST","EILPST","EKLNXY","EFGHIJ",
     "ADENOV","WFLRTV","CIMPQU","GHJOTW","BKNOPZ","CDLMSY",
     "EBDEGT","IJKSUV","OPRTUX","AEIOUN","AEIOUE","EERLST",
-    "THNDSO","BINGES","CRANES","PEOELE","LEEEEK","ERGAIL"
+    "THNDSO","BINGES","CRANES","PEOELE","LECHTK","ERGAIL"
 ];
-const RICH_BOARD_ATTEMPTS = 5; // Increased attempts for even better boards
+const RICH_BOARD_ATTEMPTS = 2; // Increased attempts for even better boards, leave as 2, best of 2
 const DIRECTIONS = [
     [-1,-1],[-1,0],[-1,1],
     [0,-1],       [0,1],
@@ -186,12 +186,16 @@ function startTimer() {
 function endGame(message) {
     isPlaying = false;
     clearInterval(timerInterval);
+
     if (gameMode === 'timed') {
         timerEl.textContent = '0';
         localStorage.setItem('lastTimedScore', score);
+        renderTimedWords();
     }
+
     messageText.textContent = message;
     messageScore.textContent = `Your final score is ${new Intl.NumberFormat().format(score)}.`;
+
     if (messageOverlay) messageOverlay.classList.remove('hidden');
     removeEventListeners();
 }
@@ -463,4 +467,23 @@ function removeEventListeners() {
     gridContainer.removeEventListener('touchstart', handleInteractionStart);
     gridContainer.removeEventListener('touchmove', handleInteractionMove);
     window.removeEventListener('touchend', handleInteractionEnd);
+}
+
+function renderTimedWords() {
+  const listEl = document.getElementById('timed-words-list');
+  if (!listEl || !allPossibleWords) return;
+  listEl.innerHTML = '';
+
+  Array.from(allPossibleWords)
+    .sort((a, b) => b.length - a.length || a.localeCompare(b))
+    .forEach(word => {
+      const li = document.createElement('li');
+      li.textContent = word;
+      if (foundWords.has(word)) {
+        li.className = 'text-green-600 font-semibold';
+      } else {
+        li.className = 'text-red-600';
+      }
+      listEl.appendChild(li);
+    });
 }

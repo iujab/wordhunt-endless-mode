@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modeButtons = document.getElementById('mode-buttons');
 
     setTimeout(() => {
-        loadingText.textContent = 'Select a Game Mode';
+        loadingText.textContent = 'Sign up or login to save your high score!';
         modeButtons.classList.remove('hidden');
     }, 500); // A brief simulated delay
 });

@@ -41,7 +41,17 @@
         <div id="message-box" class="bg-white p-8 rounded-lg shadow-2xl text-center max-w-sm mx-4">
             <p id="message-text" class="text-2xl font-bold text-slate-800"></p>
             <p id="message-score" class="text-xl mt-2"></p>
-            <a href="timed.html" id="message-close-btn" class="inline-block mt-6 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">Play Again</a>
+
+            <!-- NEW: Timed‐mode full word list -->
+            <h3 class="text-lg font-semibold mt-4 text-slate-800">All Words</h3>
+            <ul id="timed-words-list"
+                class="max-h-48 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-left">
+                <!-- Populated by script -->
+            </ul>
+
+            <a href="timed.html" id="message-close-btn" class="inline-block mt-6 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                Play Again
+            </a>
         </div>
     </div>
 
