@@ -15,7 +15,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // REMOVED: sendEmailVerification and applyActionCode as they are no longer needed
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
@@ -36,8 +35,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Make necessary functions globally available
-        // REMOVED: sendEmailVerification and applyActionCode from the global window object
         window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot };
     </script>
 
@@ -70,8 +67,8 @@
                 <h1 class="text-4xl font-bold text-white mb-2">Endless Wordhunt</h1>
                 <p id="loading-text" class="text-white mb-8">Sign up or login to save your high score!</p>
                 <div id="mode-buttons" class="space-y-4">
-                    <a href="timed.html" id="timed-mode-btn" class="block w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md text-lg">Timed Mode</a>
-                    <a href="endless.html" id="endless-mode-btn" class="block w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-700 transition duration-300 shadow-md text-lg">Endless Mode</a>
+                    <a href="timed.html" id="timed-mode-btn" class="block w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 transition duration-300 shadow-md text-lg">Timed Mode</a>
+                    <a href="endless.html" id="endless-mode-btn" class="block w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition duration-300 shadow-md text-lg">Endless Mode</a>
                 </div>
             </div>
         </div>
