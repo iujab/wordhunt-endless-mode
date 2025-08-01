@@ -18,7 +18,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
         const firebaseConfig = {
@@ -37,7 +37,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot };
+        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs, writeBatch, onSnapshot };
     </script>
 
     <div class="relative flex flex-col items-center justify-center min-h-screen p-4">
@@ -46,6 +46,7 @@
             <div id="user-info" class="hidden">
                 <p class="text-black">Welcome, <span id="user-display-name" class="font-semibold"></span></p>
                 <p class="text-black">High Score: <span id="user-highscore" class="font-semibold">0</span></p>
+                <p class="text-black">Global Rank: <span id="user-rank" class="font-semibold">N/A</span></p>
                 <button id="logout-btn" class="text-sm text-blue-600 hover:underline">Log Out</button>
             </div>
             <div id="auth-buttons">
@@ -77,7 +78,9 @@
 
         <div id="leaderboard" class="w-full max-w-sm mx-auto mt-8">
              <div class="bg-[#84a98c] rounded-lg shadow-xl p-8">
-                <h2 class="text-2xl font-bold text-white mb-4 text-center">Timed Mode Leaderboard</h2>
+                <h2 class="text-2xl font-bold text-white mb-4 text-center">
+                    Timed Mode Leaderboard <span class="text-base font-normal">(Top 15)</span>
+                </h2>
                 <div id="leaderboard-loading" class="text-center text-white">Loading...</div>
                 <ol id="leaderboard-list" class="space-y-3">
                     </ol>
