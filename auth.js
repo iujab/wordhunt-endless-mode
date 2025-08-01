@@ -12,12 +12,14 @@ document.addEventListener('DOMContentLoaded', () => {
         onAuthStateChanged,
         signOut,
         doc,
-        getDoc,
         setDoc,
+        getDoc,
         collection,
         query,
+        where,
         orderBy,
         limit,
+        getDocs,
         writeBatch,
         onSnapshot
     } = window.firebase;
