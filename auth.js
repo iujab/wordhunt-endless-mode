@@ -164,38 +164,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Auth State Listener ---
     onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
+        if (user) {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
 
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            const highScore = data.highScore || 0;
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                const highScore = data.highScore || 0;
 
-            // Update user info display
-            userDisplayNameEl.textContent = data.username;
-            userHighscoreEl.textContent = new Intl.NumberFormat().format(highScore);
-            
-            // --- New Rank Calculation Logic ---
-            const rankEl = document.getElementById('user-rank');
-            if (rankEl) {
-                rankEl.textContent = 'Calculating...';
-                const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('highScore', '>', highScore));
-                const querySnapshot = await getDocs(q);
-                const rank = querySnapshot.size + 1;
-                rankEl.textContent = `#${new Intl.NumberFormat().format(rank)}`;
+                // Update user info display
+                userDisplayNameEl.textContent = data.username;
+                userHighscoreEl.textContent = new Intl.NumberFormat().format(highScore);
+                
+                // Rank Calculation Logic
+                const rankEl = document.getElementById('user-rank');
+                if (rankEl) {
+                    // Check if score is 0 before calculating rank
+                    if (highScore === 0) {
+                        rankEl.textContent = 'N/A';
+                    } else {
+                        rankEl.textContent = 'Calculating...';
+                        const usersRef = collection(db, 'users');
+                        const q = query(usersRef, where('highScore', '>', highScore));
+                        const querySnapshot = await getDocs(q);
+                        const rank = querySnapshot.size + 1;
+                        rankEl.textContent = `#${new Intl.NumberFormat().format(rank)}`;
+                    }
+                }
             }
+            
+            authButtons.classList.add('hidden');
+            userInfo.classList.remove('hidden');
+            await processPendingScore(user);
+        } else {
+            authButtons.classList.remove('hidden');
+            userInfo.classList.add('hidden');
         }
-        
-        authButtons.classList.add('hidden');
-        userInfo.classList.remove('hidden');
-        await processPendingScore(user);
-    } else {
-        authButtons.classList.remove('hidden');
-        userInfo.classList.add('hidden');
-    }
-});
+    });
     // --- Leaderboard (Real-time) ---
     const listenForLeaderboardUpdates = () => {
         leaderboardLoading.style.display = 'block';
