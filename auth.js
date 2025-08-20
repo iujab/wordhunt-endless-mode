@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         leaderboardLoading.style.display = 'block';
         leaderboardList.innerHTML = '';
         const usersRef = collection(db, 'users');
-        const topQuery = query(usersRef, orderBy('highScore', 'desc'), limit(15));
+        const topQuery = query(usersRef, orderBy('highScore', 'desc'), limit(10));
         onSnapshot(topQuery,
             (snapshot) => {
                 if (snapshot.empty) {
