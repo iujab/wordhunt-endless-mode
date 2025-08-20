@@ -5,8 +5,7 @@
      crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timed Wordhunt</title>
-    <link rel="icon" type="image/png" href="favicon.png">
+    <title>Endless Wordhunt</title> <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -14,8 +13,8 @@
 <body class="flex items-center justify-center min-h-screen">
 
     <div id="game-container" class="w-full max-w-md mx-auto p-4">
-
-        <p class="text-black text-sm text-center mb-2 italic">*Log in to save your personal best</p>
+        
+        <p id="game-subtitle" class="text-black text-sm text-center mb-2 italic"></p>
 
         <div class="bg-[#84a98c] rounded-lg shadow-xl p-6">
             <div class="flex justify-between items-center mb-4">
@@ -25,7 +24,7 @@
                 </div>
                 <div id="timer-container">
                     <span id="timer-label" class="text-white">Time</span>
-                    <p id="timer" class="text-2xl font-bold text-white">90</p>
+                    <p id="timer" class="text-2xl font-bold text-white"></p>
                 </div>
             </div>
             <div id="current-word-container" class="w-full h-12 bg-slate-200 rounded-lg flex items-center justify-center mb-4">
@@ -34,9 +33,15 @@
             <div id="grid-container" class="relative grid grid-cols-4 gap-2 aspect-square select-none">
                 <svg id="trace-svg" class="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></svg>
             </div>
-            <div class="grid grid-cols-1 gap-2 mt-4">
-                <a href="index.html" id="change-mode-btn" class="w-full text-center bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md">Change Mode</a>
+            <div id="game-buttons" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
+                <button id="reveal-btn" class="w-full bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600 transition duration-300 shadow-md hidden">Reveal</button>
+                <button id="new-board-btn" class="w-full bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-600 transition duration-300 shadow-md hidden">New Board</button>
+                <a href="index.html" id="change-mode-btn" class="w-full text-center bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md sm:col-start-3">Change Mode</a>
             </div>
+        </div>
+        <div id="words-list-container" class="bg-[#84a98c] rounded-lg shadow-xl p-6 mt-4 hidden">
+            <h2 class="text-xl font-bold text-white mb-2">Possible Words (<span id="word-count">0</span>)</h2>
+            <div id="possible-words" class="h-64 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1"></div>
         </div>
     </div>
 
@@ -44,21 +49,26 @@
         <div id="message-box" class="bg-white p-8 rounded-lg shadow-2xl text-center max-w-sm mx-4">
             <p id="message-text" class="text-2xl font-bold text-slate-800"></p>
             <p id="message-score" class="text-xl mt-2"></p>
+            
+            <div id="timed-words-wrapper" class="hidden">
+                <h3 class="text-lg font-semibold mt-4 text-slate-800">All Words</h3>
+                <ul id="timed-words-list"
+                    class="max-h-48 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-left">
+                </ul>
+            </div>
 
-            <!-- Timed‐mode full word list -->
-            <h3 class="text-lg font-semibold mt-4 text-slate-800">All Words</h3>
-            <ul id="timed-words-list"
-                class="max-h-48 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-left">
-                <!-- Populated by script -->
-            </ul>
-
-            <a href="timed.html" id="message-close-btn" class="inline-block mt-6 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+            <a href="#" id="message-close-btn" class="inline-block mt-6 bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
                 Play Again
             </a>
         </div>
     </div>
 
     <script src="script.js"></script>
-    <script src="timed.js"></script>
+    <script>
+        // Initialize the game as soon as the main script is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeGame();
+        });
+    </script>
 </body>
 </html>

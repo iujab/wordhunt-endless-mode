@@ -72,23 +72,68 @@ async function initializeDictionary() {
 }
 
 // --- Game Initialization ---
-async function initializeGame(mode) {
+async function initializeGame() { // No longer takes a 'mode' argument
+    // Determine game mode from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    
+    // Fallback to a default mode if none is specified
+    gameMode = (mode === 'timed' || mode === 'endless') ? mode : 'endless';
+
     if (!(await initializeDictionary())) return;
-    gameMode = mode;
+    
     isPlaying = true;
 
+    // UI Elements that need dynamic content
+    const pageTitle = document.querySelector('title');
+    const gameSubtitle = document.getElementById('game-subtitle');
+    const wordsListContainer = document.getElementById('words-list-container');
+    const changeModeBtn = document.getElementById('change-mode-btn');
+    const timedWordsWrapper = document.getElementById('timed-words-wrapper');
+    const playAgainBtn = document.getElementById('message-close-btn');
+
+    // Configure UI based on the game mode
     if (gameMode === 'endless') {
+        pageTitle.textContent = 'Endless Wordhunt';
+        gameSubtitle.textContent = '*Scroll down to see remaining and completed words';
         timerLabel.style.display = 'none';
         timerEl.innerHTML = '&infin;';
-        if (revealBtn) revealBtn.classList.remove('hidden');
-        if (newBoardBtn) newBoardBtn.classList.remove('hidden');
-        const wc = document.getElementById('words-list-container');
-        if (wc) wc.style.display = 'block';
-        if (revealBtn) revealBtn.addEventListener('click', handleRevealAnswers);
-        if (newBoardBtn) newBoardBtn.addEventListener('click', () => handleNewBoard(false));
-    } else {
+        wordsListContainer.style.display = 'block';
+
+        // Show Endless mode buttons and correctly position the 'Change Mode' button
+        revealBtn?.classList.remove('hidden');
+        newBoardBtn?.classList.remove('hidden');
+        changeModeBtn?.classList.remove('sm:col-start-3');
+        
+        // Add event listeners for Endless mode buttons
+        revealBtn?.addEventListener('click', handleRevealAnswers);
+        newBoardBtn?.addEventListener('click', () => handleNewBoard(false));
+
+        // Set the 'Play Again' button link for endless mode
+        playAgainBtn.href = 'game.html?mode=endless';
+
+    } else { // Timed Mode
+        pageTitle.textContent = 'Timed Wordhunt';
+        gameSubtitle.textContent = '*Log in to save your personal best';
         timerLabel.style.display = 'block';
         timerEl.textContent = GAME_DURATION;
+        
+        // Ensure Endless mode UI is hidden
+        wordsListContainer.style.display = 'none';
+        revealBtn?.classList.add('hidden');
+        newBoardBtn?.classList.add('hidden');
+
+        // Force the container to be a single-column grid
+        gameButtonsContainer?.classList.remove('sm:grid-cols-3');
+        // Ensure the change mode button doesn't have a column-start property
+        changeModeBtn?.classList.remove('sm:col-start-3');
+        
+        // Show the word list wrapper in the end-game modal
+        timedWordsWrapper.style.display = 'block';
+
+        // Set the 'Play Again' button link for timed mode
+        playAgainBtn.href = 'game.html?mode=timed';
+        
         startTimer();
     }
 

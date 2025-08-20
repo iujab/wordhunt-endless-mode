@@ -70,8 +70,8 @@
                 <h1 class="text-4xl font-bold text-white mb-2">Endless Wordhunt</h1>
                 <p id="loading-text" class="text-white mb-8">Sign up or login to save your high score!</p>
                 <div id="mode-buttons" class="space-y-4">
-                    <a href="timed.html" id="timed-mode-btn" class="block w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 transition duration-300 shadow-md text-lg">Timed Mode</a>
-                    <a href="endless.html" id="endless-mode-btn" class="block w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition duration-300 shadow-md text-lg">Endless Mode</a>
+                    <a href="game.html?mode=timed" id="timed-mode-btn" class="block w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 transition duration-300 shadow-md text-lg">Timed Mode</a>
+                    <a href="game.html?mode=endless" id="endless-mode-btn" class="block w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-pink-700 transition duration-300 shadow-md text-lg">Endless Mode</a>
                 </div>
             </div>
         </div>
@@ -109,7 +109,19 @@
         </div>
     </div>
 
-    <script src="landing.js"></script>
+    <script>
+        // Logic from the old landing.js is now here
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadingText = document.getElementById('loading-text');
+            const modeButtons = document.getElementById('mode-buttons');
+
+            setTimeout(() => {
+                loadingText.textContent = 'Sign up or login to save your high score!';
+                modeButtons.classList.remove('hidden');
+            }, 500); // A brief simulated delay
+        });
+    </script>
+
     <script src="auth.js"></script>
 </body>
 </html>
