@@ -72,44 +72,38 @@ async function initializeDictionary() {
 }
 
 // --- Game Initialization ---
-async function initializeGame() { // No longer takes a 'mode' argument
-    // Determine game mode from URL parameter
+async function initializeGame() {
     const urlParams = new URLSearchParams(window.location.search);
     const mode = urlParams.get('mode');
-    
-    // Fallback to a default mode if none is specified
     gameMode = (mode === 'timed' || mode === 'endless') ? mode : 'endless';
 
     if (!(await initializeDictionary())) return;
     
     isPlaying = true;
 
-    // UI Elements that need dynamic content
+    // --- Get all UI elements ---
     const pageTitle = document.querySelector('title');
     const gameSubtitle = document.getElementById('game-subtitle');
     const wordsListContainer = document.getElementById('words-list-container');
-    const changeModeBtn = document.getElementById('change-mode-btn');
     const timedWordsWrapper = document.getElementById('timed-words-wrapper');
     const playAgainBtn = document.getElementById('message-close-btn');
+    const endlessButtons = document.getElementById('endless-buttons');
+    const timedButton = document.getElementById('timed-button');
 
-    // Configure UI based on the game mode
+    // --- Configure UI based on the game mode ---
     if (gameMode === 'endless') {
         pageTitle.textContent = 'Endless Wordhunt';
         gameSubtitle.textContent = '*Scroll down to see remaining and completed words';
         timerLabel.style.display = 'none';
         timerEl.innerHTML = '&infin;';
+        
         wordsListContainer.style.display = 'block';
-
-        // Show Endless mode buttons and correctly position the 'Change Mode' button
-        revealBtn?.classList.remove('hidden');
-        newBoardBtn?.classList.remove('hidden');
-        changeModeBtn?.classList.remove('sm:col-start-3');
+        endlessButtons.classList.remove('hidden');
+        timedButton.classList.add('hidden');
         
         // Add event listeners for Endless mode buttons
         revealBtn?.addEventListener('click', handleRevealAnswers);
         newBoardBtn?.addEventListener('click', () => handleNewBoard(false));
-
-        // Set the 'Play Again' button link for endless mode
         playAgainBtn.href = 'game.html?mode=endless';
 
     } else { // Timed Mode
@@ -118,20 +112,10 @@ async function initializeGame() { // No longer takes a 'mode' argument
         timerLabel.style.display = 'block';
         timerEl.textContent = GAME_DURATION;
         
-        // Ensure Endless mode UI is hidden
-        wordsListContainer.style.display = 'none';
-        revealBtn?.classList.add('hidden');
-        newBoardBtn?.classList.add('hidden');
-
-        // Force the container to be a single-column grid
-        gameButtonsContainer?.classList.remove('sm:grid-cols-3');
-        // Ensure the change mode button doesn't have a column-start property
-        changeModeBtn?.classList.remove('sm:col-start-3');
+        endlessButtons.classList.add('hidden');
+        timedButton.classList.remove('hidden');
         
-        // Show the word list wrapper in the end-game modal
         timedWordsWrapper.style.display = 'block';
-
-        // Set the 'Play Again' button link for timed mode
         playAgainBtn.href = 'game.html?mode=timed';
         
         startTimer();

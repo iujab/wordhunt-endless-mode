@@ -33,10 +33,14 @@
             <div id="grid-container" class="relative grid grid-cols-4 gap-2 aspect-square select-none">
                 <svg id="trace-svg" class="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></svg>
             </div>
-            <div id="game-buttons" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
-                <button id="reveal-btn" class="w-full bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600 transition duration-300 shadow-md hidden">Reveal</button>
-                <button id="new-board-btn" class="w-full bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-600 transition duration-300 shadow-md hidden">New Board</button>
-                <a href="index.html" id="change-mode-btn" class="w-full text-center bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md sm:col-start-3">Change Mode</a>
+            <div id="endless-buttons" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 hidden">
+                <button id="reveal-btn" class="w-full bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-yellow-600 transition duration-300 shadow-md">Reveal</button>
+                <button id="new-board-btn" class="w-full bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-600 transition duration-300 shadow-md">New Board</button>
+                <a href="index.html" class="w-full text-center bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md sm:col-start-3">Change Mode</a>
+            </div>
+
+            <div id="timed-button" class="grid grid-cols-1 gap-2 mt-4 hidden">
+                <a href="index.html" class="w-full text-center bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition duration-300 shadow-md">Change Mode</a>
             </div>
         </div>
         <div id="words-list-container" class="bg-[#84a98c] rounded-lg shadow-xl p-6 mt-4 hidden">
