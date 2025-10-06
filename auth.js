@@ -7,10 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const {
         auth,
         db,
-        getStorage,
-        storageRef,
-        uploadBytes,
-        getDownloadURL,
         createUserWithEmailAndPassword,
         signInWithEmailAndPassword,
         onAuthStateChanged,
@@ -27,12 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         writeBatch,
         onSnapshot
     } = window.firebase;
-
-    const DEFAULT_PFP = 'default_pfp.svg';
-    const userPfpImg = document.getElementById('user-pfp-img');
-    const updatePfpBtn = document.getElementById('update-pfp-btn');
-    const updatePfpInput = document.getElementById('update-pfp-input');
-
 
     // --- DOM Elements ---
     const authModal = document.getElementById('auth-modal');
@@ -71,12 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const userDocRef = doc(db, 'users', user.uid);
             const docSnap = await getDoc(userDocRef);
             if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const pfp = data.pfpUrl || DEFAULT_PFP;
-                    if (userPfpImg) userPfpImg.src = pfp;
-                    if (!data.pfpUrl) {
-                        await setDoc(userDocRef, { pfpUrl: DEFAULT_PFP }, { merge: true });
-                    }
                 const currentHighScore = docSnap.data().highScore || 0;
                 if (score > currentHighScore) {
                     await setDoc(userDocRef, { highScore: score }, { merge: true });
@@ -120,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isLoginMode) {
                 await signInWithEmailAndPassword(auth, email, password);
             } else {
-                    await setDoc(userDocRef, { pfpUrl: DEFAULT_PFP }, { merge: true });
                 if (!/^[a-z0-9_]{3,15}$/.test(username)) {
                     throw { code: 'auth/invalid-username' };
                 }
@@ -200,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (highScore === 0) {
                         rankEl.textContent = 'N/A';
                     } else {
-                    await setDoc(userDocRef, { pfpUrl: DEFAULT_PFP }, { merge: true });
                         rankEl.textContent = 'Calculating...';
                         const usersRef = collection(db, 'users');
                         const q = query(usersRef, where('highScore', '>', highScore));
@@ -215,7 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
             userInfo.classList.remove('hidden');
             await processPendingScore(user);
         } else {
-            await setDoc(userDocRef, { pfpUrl: DEFAULT_PFP }, { merge: true });
             authButtons.classList.remove('hidden');
             userInfo.classList.add('hidden');
         }
@@ -232,21 +213,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     leaderboardLoading.textContent = 'No scores yet. Be the first!';
                     return;
                 }
-                leaderboardList.innerHTML = snapshot.docs.map((d, idx) => {
-    const u = d.data();
-    const pfp = u.pfpUrl || 'default_pfp.svg';
-    const place = idx + 1;
-    return `
-      <li class="flex items-center justify-between bg-white/20 backdrop-blur rounded-md px-3 py-2">
-        <div class="flex items-center gap-3">
-          <span class="text-white/80 w-5 text-right">${place}.</span>
-          <img src="${pfp}" alt="pfp" class="w-8 h-8 rounded-full ring-1 ring-white/50" />
-          <span class="font-semibold text-white">${u.username || 'player'}</span>
-        </div>
-        <span class="font-bold text-white">${new Intl.NumberFormat().format(u.highScore || 0)}</span>
-      </li>`;
-}).join('');
-leaderboardLoading.style.display = 'none';
+                leaderboardList.innerHTML = snapshot.docs.map((docSnap, idx) => {
+                    const u = docSnap.data();
+                    return `
+                        <li class="flex justify-between items-center">
+                            <div class="flex items-center">
+                                <span class="font-bold w-6 text-white">${idx+1}.</span>
+                                <span class="text-white">${u.username}</span>
+                            </div>
+                            <span class="font-bold text-white">${new Intl.NumberFormat().format(u.highScore)}</span>
+                        </li>`;
+                }).join('');
+                leaderboardLoading.style.display = 'none';
             },
             (err) => {
                 console.error('Leaderboard listener error:', err);
@@ -254,30 +232,6 @@ leaderboardLoading.style.display = 'none';
             }
         );
     };
-
-    
-    // --- Update PFP ---
-    if (updatePfpBtn && updatePfpInput) {
-        updatePfpBtn.addEventListener('click', () => updatePfpInput.click());
-        updatePfpInput.addEventListener('change', async (e) => {
-            const file = e.target.files && e.target.files[0];
-            if (!file || !auth.currentUser) return;
-            try {
-                const storage = getStorage();
-                const p = storageRef(storage, `pfp/${auth.currentUser.uid}`);
-                await uploadBytes(p, file);
-                const url = await getDownloadURL(p);
-                const userRef = doc(db, 'users', auth.currentUser.uid);
-                await setDoc(userRef, { pfpUrl: url }, { merge: true });
-                if (userPfpImg) userPfpImg.src = url;
-            } catch (err) {
-                console.error('PFP upload failed', err);
-                alert('Could not update profile picture. Try a smaller image?');
-            } finally {
-                updatePfpInput.value = '';
-            }
-        });
-    }
 
     listenForLeaderboardUpdates();
 });

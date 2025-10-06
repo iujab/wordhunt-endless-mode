@@ -20,7 +20,6 @@
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC0LqycO4DZx89kPkQ3iI6C-K65U3C6Aog",
@@ -38,24 +37,13 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "http
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs, writeBatch, onSnapshot , getStorage, storageRef, uploadBytes, getDownloadURL };
+        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs, writeBatch, onSnapshot };
     </script>
 
     <div class="relative flex flex-col items-center justify-center min-h-screen p-4">
 
         <div id="auth-container" class="absolute top-4 right-4 text-right">
-            <div id="user-info" class="hidden flex items-center gap-3">
-  <img id="user-pfp-img" src="default_pfp.svg" alt="Profile" class="w-10 h-10 rounded-full ring-2 ring-white/70 shadow" />
-  <div class="text-left">
-    <p class="text-black">Welcome, <span id="user-display-name" class="font-semibold"></span></p>
-    <p class="text-black">High Score: <span id="user-highscore" class="font-semibold">0</span></p>
-    <p class="text-black">Global Rank: <span id="user-rank" class="font-semibold">N/A</span></p>
-  </div>
-  <div class="flex flex-col items-end gap-1">
-    <button id="update-pfp-btn" class="text-xs bg-slate-800 text-white px-2 py-1 rounded-md hover:opacity-90">Update PFP</button>
-    <button id="logout-btn" class="text-xs text-blue-600 hover:underline">Log Out</button>
-    <input id="update-pfp-input" type="file" accept="image/*" class="hidden" />
-  </div>
+            <div id="user-info" class="hidden">
                 <p class="text-black">Welcome, <span id="user-display-name" class="font-semibold"></span></p>
                 <p class="text-black">High Score: <span id="user-highscore" class="font-semibold">0</span></p>
                 <p class="text-black">Global Rank: <span id="user-rank" class="font-semibold">N/A</span></p>
