@@ -51,7 +51,7 @@ let selectedLines = [];
 // --- Dictionary Initialization ---
 async function initializeDictionary() {
     try {
-        const resp = await fetch('./words_dictionary.json');
+        const resp = await fetch('./assets/words_dictionary.json');
         if (!resp.ok) throw new Error(`status ${resp.status}`);
         const obj = await resp.json();
         DICTIONARY = new Set(Object.keys(obj).map(w => w.toUpperCase()));
