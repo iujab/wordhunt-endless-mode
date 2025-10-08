@@ -26,12 +26,55 @@ const CUSTOM_DICE = [
     "EBDEGT","IJKSUV","OPRTUX","AEIOUN","AEIOUE","EERLST",
     "THNDSO","BINGES","CRANES","PEOELE","LECHTK","ERGAIL"
 ];
-const RICH_BOARD_ATTEMPTS = 2; // Increased attempts for even better boards, leave as 2, best of 2
+const RICH_BOARD_ATTEMPTS = 2; 
 const DIRECTIONS = [
     [-1,-1],[-1,0],[-1,1],
     [0,-1],       [0,1],
     [1,-1], [1,0], [1,1]
 ];
+
+// --- Web Audio Setup ---
+let audioContext;
+const audioBuffers = new Map(); // To store our decoded sound data
+
+// Initializes the AudioContext. Must be called after a user interaction on some browsers.
+function initAudioContext() {
+    if (!audioContext) {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.error("Web Audio API is not supported in this browser");
+        }
+    }
+}
+
+// Fetches a sound file and decodes it into an AudioBuffer.
+async function loadSound(name, url) {
+    if (!audioContext) return;
+    try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        audioBuffers.set(name, audioBuffer);
+    } catch (error) {
+        console.error(`Failed to load sound: ${name}`, error);
+    }
+}
+
+// Plays a sound from the pre-loaded buffer. This is fast and reliable.
+function playSound(name) {
+    if (!audioContext || !audioBuffers.has(name)) return;
+    
+    // On some mobile devices, the audio context can be suspended. This resumes it.
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffers.get(name);
+    source.connect(audioContext.destination);
+    source.start(0);
+}
 
 // --- Game State ---
 let DICTIONARY = new Set();
@@ -47,20 +90,6 @@ let isPlaying  = false;
 let isDragging = false;
 let selectedTiles = [];
 let selectedLines = [];
-let jingleSound = null; // We still preload the jingle, but will create new instances for overlap
-
-// --- Audio Initialization ---
-function loadAudio() {
-    try {
-        // We only need to preload the jingle now. The tick is created on the fly.
-        jingleSound = new Audio('assets/jingle.mp3');
-        jingleSound.preload = 'auto';
-        jingleSound.load();
-    } catch (err) {
-        console.error("Could not load audio files:", err);
-        jingleSound = null;
-    }
-}
 
 // --- Dictionary Initialization ---
 async function initializeDictionary() {
@@ -93,10 +122,8 @@ async function initializeGame() {
 
     if (!(await initializeDictionary())) return;
     
-    loadAudio();
     isPlaying = true;
 
-    // --- Get all UI elements ---
     const pageTitle = document.querySelector('title');
     const gameSubtitle = document.getElementById('game-subtitle');
     const wordsListContainer = document.getElementById('words-list-container');
@@ -105,7 +132,6 @@ async function initializeGame() {
     const endlessButtons = document.getElementById('endless-buttons');
     const timedButton = document.getElementById('timed-button');
 
-    // --- Configure UI based on the game mode ---
     if (gameMode === 'endless') {
         pageTitle.textContent = 'Endless Wordhunt';
         gameSubtitle.textContent = '*Scroll down to see remaining and completed words';
@@ -249,26 +275,16 @@ function solveBoard(currentGrid) {
     
     function dfs(r, c, w) {
         if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE || visited[r][c]) return;
-        
         w += currentGrid[r][c];
-        
         if (!PREFIXES.has(w) && !DICTIONARY.has(w)) return;
-        
-        if (w.length >= 3 && DICTIONARY.has(w)) {
-            found.add(w);
-        }
-        
+        if (w.length >= 3 && DICTIONARY.has(w)) found.add(w);
         visited[r][c] = true;
-        for (const [dr, dc] of DIRECTIONS) {
-            dfs(r + dr, c + dc, w);
-        }
-        visited[r][c] = false; // backtrack
+        for (const [dr, dc] of DIRECTIONS) dfs(r + dr, c + dc, w);
+        visited[r][c] = false;
     }
     
     for (let r = 0; r < GRID_SIZE; r++) {
-        for (let c = 0; c < GRID_SIZE; c++) {
-            dfs(r, c, "");
-        }
+        for (let c = 0; c < GRID_SIZE; c++) dfs(r, c, "");
     }
     return found;
 }
@@ -407,7 +423,7 @@ function resetSelection() {
 
 // --- Tile Selection ---
 function selectTile(tile) {
-    new Audio('assets/tick.mp3').play();
+    playSound('tick'); // Play sound using the reliable Web Audio API
     
     if (selectedTiles.length > 0) {
         const prev = selectedTiles[selectedTiles.length - 1];
@@ -427,6 +443,15 @@ function selectTile(tile) {
 function handleInteractionStart(e) {
     if (!isPlaying) return;
     e.preventDefault();
+    
+    // Crucial for mobile: initialize audio context on the first user touch.
+    if (!audioContext) {
+        initAudioContext();
+        // Load sounds now that we have a context
+        loadSound('tick', 'assets/tick.mp3');
+        loadSound('jingle', 'assets/jingle.mp3');
+    }
+
     const tile = e.target.closest('.tile');
     if (tile) {
         isDragging = true;
@@ -463,7 +488,7 @@ function handleInteractionMove(e) {
 
 function handleInteractionEnd(e) {
     if (!isDragging || !isPlaying) return;
-    if (e) e.preventDefault(); // Check if e exists, as we might call this manually
+    if (e) e.preventDefault(); 
 
     const word = selectedTiles.map(t => t.textContent).join('').toUpperCase();
     const tilesInPath = [...selectedTiles];
@@ -478,7 +503,7 @@ function handleInteractionEnd(e) {
     const isAlreadyFound = foundWords.has(word);
 
     if (isAWord && !isAlreadyFound) {
-        new Audio('assets/jingle.mp3').play(); // JINGLE FIX: Play new instance for overlap
+        playSound('jingle'); // Play sound using the reliable Web Audio API
         foundWords.add(word);
         updateScore(word);
         if (gameMode === 'endless') {
@@ -490,7 +515,6 @@ function handleInteractionEnd(e) {
     }
 }
 
-// This is the new handler for the freeze bug
 function handleMouseLeave(e) {
     if (isDragging) {
         handleInteractionEnd(e);
@@ -506,7 +530,6 @@ function addEventListeners() {
     gridContainer.addEventListener('touchstart', handleInteractionStart, {passive:false});
     gridContainer.addEventListener('touchmove', handleInteractionMove, {passive:false});
     window.addEventListener('touchend', handleInteractionEnd, {passive:false});
-    // FREEZE FIX: Add listener for when mouse leaves the document
     document.body.addEventListener('mouseleave', handleMouseLeave);
 }
 
@@ -518,7 +541,6 @@ function removeEventListeners() {
     gridContainer.removeEventListener('touchstart', handleInteractionStart);
     gridContainer.removeEventListener('touchmove', handleInteractionMove);
     window.removeEventListener('touchend', handleInteractionEnd);
-    // FREEZE FIX: Remove the corresponding listener
     document.body.removeEventListener('mouseleave', handleMouseLeave);
 }
 
