@@ -47,22 +47,17 @@ let isPlaying  = false;
 let isDragging = false;
 let selectedTiles = [];
 let selectedLines = [];
-let tickSound  = null;
-let jingleSound = null;
+let jingleSound = null; // We still preload the jingle, but will create new instances for overlap
 
 // --- Audio Initialization ---
 function loadAudio() {
     try {
-        tickSound = new Audio('assets/tick.mp3');
+        // We only need to preload the jingle now. The tick is created on the fly.
         jingleSound = new Audio('assets/jingle.mp3');
-        tickSound.preload = 'auto';
         jingleSound.preload = 'auto';
-        tickSound.load();
         jingleSound.load();
     } catch (err) {
         console.error("Could not load audio files:", err);
-        // Silently fail, game can continue without audio
-        tickSound = null;
         jingleSound = null;
     }
 }
@@ -121,7 +116,6 @@ async function initializeGame() {
         endlessButtons.classList.remove('hidden');
         timedButton.classList.add('hidden');
         
-        // Add event listeners for Endless mode buttons
         revealBtn?.addEventListener('click', handleRevealAnswers);
         newBoardBtn?.addEventListener('click', () => handleNewBoard(false));
         playAgainBtn.href = 'game.html?mode=endless';
@@ -178,7 +172,6 @@ function renderGrid() {
     gridContainer.insertBefore(frag, traceSvg);
 }
 
-// OPTIMIZED: Calculates and stores tile center coords for faster access during move events.
 function generateTraceLattice() {
     if (!traceSvg) return;
     traceSvg.innerHTML = '';
@@ -190,8 +183,8 @@ function generateTraceLattice() {
         const rect = tile.getBoundingClientRect();
         const centerX = rect.left - contRect.left + rect.width / 2;
         const centerY = rect.top - contRect.top + rect.height / 2;
-        tile.dataset.centerX = centerX; // Store center X
-        tile.dataset.centerY = centerY; // Store center Y
+        tile.dataset.centerX = centerX;
+        tile.dataset.centerY = centerY;
         return {
             row: +tile.dataset.row, col: +tile.dataset.col,
             x: centerX, y: centerY
@@ -250,7 +243,6 @@ function endGame(message) {
 }
 
 // --- Solving ---
-// OPTIMIZED: The visited grid is passed by reference, avoiding potential overhead.
 function solveBoard(currentGrid) {
     const found = new Set();
     const visited = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(false));
@@ -342,7 +334,7 @@ function handleNewBoard(isFirstTime = false) {
     allPossibleWords = bestWords;
 
     renderGrid();
-    setTimeout(generateTraceLattice, 50); // Use timeout to ensure DOM is updated
+    setTimeout(generateTraceLattice, 50);
 
     if (gameMode === 'endless') {
         renderPossibleWords();
@@ -358,7 +350,7 @@ function updateScore(word) {
     else if (L === 4) pts = 400;
     else if (L === 5) pts = 800;
     else if (L === 6) pts = 1400;
-    else if (L >= 7) pts = 1400 + (L - 6) * 400; //just add 400 per letter going on from here
+    else if (L >= 7) pts = 1400 + (L - 6) * 400;
     score += pts;
     if (scoreEl) scoreEl.textContent = new Intl.NumberFormat().format(score);
 }
@@ -416,6 +408,7 @@ function resetSelection() {
 // --- Tile Selection ---
 function selectTile(tile) {
     new Audio('assets/tick.mp3').play();
+    
     if (selectedTiles.length > 0) {
         const prev = selectedTiles[selectedTiles.length - 1];
         const id = [`tile-${prev.dataset.row}-${prev.dataset.col}`, `tile-${tile.dataset.row}-${tile.dataset.col}`].sort().join('--');
@@ -451,10 +444,9 @@ function handleInteractionMove(e) {
 
     if (!el || !el.classList.contains('tile') || selectedTiles.includes(el)) return;
     
-    // OPTIMIZED: Uses pre-calculated center coordinates from the element's dataset.
     const centerX = +el.dataset.centerX;
     const centerY = +el.dataset.centerY;
-    const rect = el.getBoundingClientRect(); // Still need this for width
+    const rect = el.getBoundingClientRect();
     const contRect = gridContainer.getBoundingClientRect();
 
     const dx = (x - contRect.left) - centerX;
@@ -469,10 +461,9 @@ function handleInteractionMove(e) {
     }
 }
 
-// OPTIMIZED: Restructured with guard clauses for clarity.
 function handleInteractionEnd(e) {
     if (!isDragging || !isPlaying) return;
-    e.preventDefault();
+    if (e) e.preventDefault(); // Check if e exists, as we might call this manually
 
     const word = selectedTiles.map(t => t.textContent).join('').toUpperCase();
     const tilesInPath = [...selectedTiles];
@@ -481,15 +472,13 @@ function handleInteractionEnd(e) {
     isDragging = false;
     resetSelection();
 
-    if (tilesInPath.length < 3) return; // Guard against words that are too short
+    if (tilesInPath.length < 3) return;
 
     const isAWord = allPossibleWords.has(word);
     const isAlreadyFound = foundWords.has(word);
 
     if (isAWord && !isAlreadyFound) {
-        if (jingleSound) {
-            jingleSound.play();
-        }
+        new Audio('assets/jingle.mp3').play(); // JINGLE FIX: Play new instance for overlap
         foundWords.add(word);
         updateScore(word);
         if (gameMode === 'endless') {
@@ -498,6 +487,13 @@ function handleInteractionEnd(e) {
         }
     } else if (!isAWord) {
         flashInvalidPath(tilesInPath, linesInPath);
+    }
+}
+
+// This is the new handler for the freeze bug
+function handleMouseLeave(e) {
+    if (isDragging) {
+        handleInteractionEnd(e);
     }
 }
 
@@ -510,6 +506,8 @@ function addEventListeners() {
     gridContainer.addEventListener('touchstart', handleInteractionStart, {passive:false});
     gridContainer.addEventListener('touchmove', handleInteractionMove, {passive:false});
     window.addEventListener('touchend', handleInteractionEnd, {passive:false});
+    // FREEZE FIX: Add listener for when mouse leaves the document
+    document.body.addEventListener('mouseleave', handleMouseLeave);
 }
 
 function removeEventListeners() {
@@ -520,6 +518,8 @@ function removeEventListeners() {
     gridContainer.removeEventListener('touchstart', handleInteractionStart);
     gridContainer.removeEventListener('touchmove', handleInteractionMove);
     window.removeEventListener('touchend', handleInteractionEnd);
+    // FREEZE FIX: Remove the corresponding listener
+    document.body.removeEventListener('mouseleave', handleMouseLeave);
 }
 
 function renderTimedWords() {
