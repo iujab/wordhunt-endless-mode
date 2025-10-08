@@ -47,6 +47,25 @@ let isPlaying  = false;
 let isDragging = false;
 let selectedTiles = [];
 let selectedLines = [];
+let tickSound  = null;
+let jingleSound = null;
+
+// --- Audio Initialization ---
+function loadAudio() {
+    try {
+        tickSound = new Audio('assets/tick.mp3');
+        jingleSound = new Audio('assets/jingle.mp3');
+        tickSound.preload = 'auto';
+        jingleSound.preload = 'auto';
+        tickSound.load();
+        jingleSound.load();
+    } catch (err) {
+        console.error("Could not load audio files:", err);
+        // Silently fail, game can continue without audio
+        tickSound = null;
+        jingleSound = null;
+    }
+}
 
 // --- Dictionary Initialization ---
 async function initializeDictionary() {
@@ -79,6 +98,7 @@ async function initializeGame() {
 
     if (!(await initializeDictionary())) return;
     
+    loadAudio();
     isPlaying = true;
 
     // --- Get all UI elements ---
@@ -395,6 +415,7 @@ function resetSelection() {
 
 // --- Tile Selection ---
 function selectTile(tile) {
+    new Audio('assets/tick.mp3').play();
     if (selectedTiles.length > 0) {
         const prev = selectedTiles[selectedTiles.length - 1];
         const id = [`tile-${prev.dataset.row}-${prev.dataset.col}`, `tile-${tile.dataset.row}-${tile.dataset.col}`].sort().join('--');
@@ -466,6 +487,9 @@ function handleInteractionEnd(e) {
     const isAlreadyFound = foundWords.has(word);
 
     if (isAWord && !isAlreadyFound) {
+        if (jingleSound) {
+            jingleSound.play();
+        }
         foundWords.add(word);
         updateScore(word);
         if (gameMode === 'endless') {
