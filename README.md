@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img src="assets/imag/favicon.png" width="300">
+    <img src="assets/favicon.png" width="100">
   </picture>
 </p>
 
