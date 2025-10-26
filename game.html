@@ -12,6 +12,23 @@
 </head>
 <body class="flex items-center justify-center min-h-screen">
 
+    <button
+        id="sound-toggle"
+        type="button"
+        class="fixed top-4 right-4 z-50 bg-white/90 text-slate-800 font-semibold p-3 rounded-full shadow-lg hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-400 flex items-center justify-center"
+        aria-pressed="false"
+        aria-label="Mute sound"
+    >
+        <img
+            id="sound-toggle-icon"
+            src="assets/Speaker_Icon.svg"
+            alt=""
+            class="w-6 h-6"
+            aria-hidden="true"
+        />
+        <span id="sound-toggle-label" class="sr-only">Mute sound</span>
+    </button>
+
     <div id="game-container" class="w-full max-w-md mx-auto p-4">
         
         <p id="game-subtitle" class="text-black text-sm text-center mb-2 italic"></p>

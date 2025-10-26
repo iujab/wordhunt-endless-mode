@@ -16,6 +16,9 @@ const gameButtonsContainer = document.getElementById('game-buttons');
 const messageOverlay = document.getElementById('message-overlay');
 const messageText = document.getElementById('message-text');
 const messageScore = document.getElementById('message-score');
+const soundToggleBtn = document.getElementById('sound-toggle');
+const soundToggleIcon = document.getElementById('sound-toggle-icon');
+const soundToggleLabel = document.getElementById('sound-toggle-label');
 
 // --- Constants & Configuration ---
 const GRID_SIZE = 4;
@@ -32,6 +35,7 @@ const DIRECTIONS = [
     [0,-1],       [0,1],
     [1,-1], [1,0], [1,1]
 ];
+const SOUND_STORAGE_KEY = 'wh-sound-muted';
 
 // --- Web Audio Setup ---
 let audioContext;
@@ -61,9 +65,45 @@ async function loadSound(name, url) {
     }
 }
 
+function updateSoundToggleUI() {
+    if (!soundToggleBtn) return;
+    const labelText = isMuted ? 'Unmute sound' : 'Mute sound';
+    soundToggleBtn.setAttribute('aria-pressed', String(isMuted));
+    soundToggleBtn.setAttribute('aria-label', labelText);
+    if (soundToggleIcon) {
+        soundToggleIcon.src = isMuted ? 'assets/Mute_Icon.svg' : 'assets/Speaker_Icon.svg';
+    }
+    if (soundToggleLabel) {
+        soundToggleLabel.textContent = labelText;
+    }
+}
+
+function setMuteState(value) {
+    isMuted = value;
+    try {
+        localStorage.setItem(SOUND_STORAGE_KEY, value ? 'true' : 'false');
+    } catch (err) {
+    }
+    updateSoundToggleUI();
+    if (!value && audioContext && audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+}
+
+function loadStoredMutePreference() {
+    try {
+        const stored = localStorage.getItem(SOUND_STORAGE_KEY);
+        if (stored !== null) {
+            isMuted = stored === 'true';
+        }
+    } catch (err) {
+    }
+    updateSoundToggleUI();
+}
+
 // Plays a sound from the pre-loaded buffer. This is fast and reliable.
 function playSound(name) {
-    if (!audioContext || !audioBuffers.has(name)) return;
+    if (isMuted || !audioContext || !audioBuffers.has(name)) return;
     
     // On some mobile devices, the audio context can be suspended. This resumes it.
     if (audioContext.state === 'suspended') {
@@ -90,6 +130,7 @@ let isPlaying  = false;
 let isDragging = false;
 let selectedTiles = [];
 let selectedLines = [];
+let isMuted   = false;
 
 // --- Dictionary Initialization ---
 async function initializeDictionary() {
@@ -560,5 +601,26 @@ function renderTimedWords() {
         li.className = 'text-red-600';
       }
       listEl.appendChild(li);
+    });
+}
+
+loadStoredMutePreference();
+
+if (soundToggleBtn) {
+    soundToggleBtn.addEventListener('click', () => {
+        const nextMuted = !isMuted;
+        setMuteState(nextMuted);
+
+        if (!nextMuted) {
+            initAudioContext();
+            if (audioContext) {
+                if (!audioBuffers.has('tick')) {
+                    loadSound('tick', 'assets/tick.mp3');
+                }
+                if (!audioBuffers.has('jingle')) {
+                    loadSound('jingle', 'assets/jingle.mp3');
+                }
+            }
+        }
     });
 }
