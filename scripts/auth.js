@@ -102,16 +102,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (isLoginMode) {
+                // Existing user login
                 await signInWithEmailAndPassword(auth, email, password);
             } else {
+                // Sign up
                 if (!/^[a-z0-9_]{3,15}$/.test(username)) {
                     throw { code: 'auth/invalid-username' };
                 }
+
                 const usernameRef = doc(db, 'usernames', username);
                 if ((await getDoc(usernameRef)).exists()) {
                     throw { code: 'auth/email-already-in-use' };
                 }
+
                 const { user } = await createUserWithEmailAndPassword(auth, email, password);
+
+                // Create both username mapping + user profile doc
                 const batch = writeBatch(db);
                 batch.set(doc(db, 'users', user.uid), {
                     username,
@@ -121,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 batch.set(usernameRef, { uid: user.uid });
                 await batch.commit();
             }
+
             closeModal();
         } catch (error) {
             switch (error.code) {
@@ -131,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'auth/invalid-username':
                 case 'auth/invalid-email':
-                    authError.textContent = 'Username contains invalid characters.';
+                    authError.textContent = 'Username must be 3–15 chars (a–z, 0–9, _).';
                     break;
                 case 'auth/email-already-in-use':
                     authError.textContent = 'This username is already taken.';
@@ -166,7 +173,25 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
+            let userDoc = await getDoc(userDocRef);
+
+            //if this is a legacy account with no Firestore doc yet, create one now
+            if (!userDoc.exists()) {
+                try {
+                    const email = user.email || '';
+                    const fallbackUsername = (email.split('@')[0] || 'player').toLowerCase();
+                    await setDoc(userDocRef, {
+                        username: fallbackUsername,
+                        highScore: 0,
+                        createdAt: new Date()
+                    }, { merge: true });
+
+                    // refresh snapshot
+                    userDoc = await getDoc(userDocRef);
+                } catch (err) {
+                    console.error('Failed to create missing user doc:', err);
+                }
+            }
 
             if (userDoc.exists()) {
                 const data = userDoc.data();
@@ -179,7 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Rank Calculation Logic
                 const rankEl = document.getElementById('user-rank');
                 if (rankEl) {
-                    // Check if score is 0 before calculating rank
                     if (highScore === 0) {
                         rankEl.textContent = 'N/A';
                     } else {
@@ -195,35 +219,42 @@ document.addEventListener('DOMContentLoaded', () => {
             
             authButtons.classList.add('hidden');
             userInfo.classList.remove('hidden');
+
             await processPendingScore(user);
         } else {
             authButtons.classList.remove('hidden');
             userInfo.classList.add('hidden');
         }
     });
+
     // --- Leaderboard (Real-time) ---
     const listenForLeaderboardUpdates = () => {
         leaderboardLoading.style.display = 'block';
         leaderboardList.innerHTML = '';
+
         const usersRef = collection(db, 'users');
         const topQuery = query(usersRef, orderBy('highScore', 'desc'), limit(10));
-        onSnapshot(topQuery,
+
+        onSnapshot(
+            topQuery,
             (snapshot) => {
                 if (snapshot.empty) {
                     leaderboardLoading.textContent = 'No scores yet. Be the first!';
                     return;
                 }
+
                 leaderboardList.innerHTML = snapshot.docs.map((docSnap, idx) => {
                     const u = docSnap.data();
                     return `
                         <li class="flex justify-between items-center">
                             <div class="flex items-center">
-                                <span class="font-bold w-6 text-white">${idx+1}.</span>
+                                <span class="font-bold w-6 text-white">${idx + 1}.</span>
                                 <span class="text-white">${u.username}</span>
                             </div>
                             <span class="font-bold text-white">${new Intl.NumberFormat().format(u.highScore)}</span>
                         </li>`;
                 }).join('');
+
                 leaderboardLoading.style.display = 'none';
             },
             (err) => {

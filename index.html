@@ -15,10 +15,31 @@
 </head>
 <body class="">
 
+    <!-- Firebase init / expose SDKs to window.firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import {
+            getAuth,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            setDoc,
+            getDoc,
+            collection,
+            query,
+            where,
+            orderBy,
+            limit,
+            getDocs,
+            writeBatch,
+            onSnapshot,
+            getCountFromServer
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
         const firebaseConfig = {
@@ -37,7 +58,27 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        window.firebase = { auth, db, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs, writeBatch, onSnapshot };
+        // Expose what the rest of the site needs (auth.js, player count script, etc.)
+        window.firebase = {
+            auth,
+            db,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            onAuthStateChanged,
+            signOut,
+            doc,
+            setDoc,
+            getDoc,
+            collection,
+            query,
+            where,
+            orderBy,
+            limit,
+            getDocs,
+            writeBatch,
+            onSnapshot,
+            getCountFromServer
+        };
     </script>
 
     <div class="relative flex flex-col items-center justify-center min-h-screen p-4">
@@ -81,9 +122,14 @@
                 <h2 class="text-2xl font-bold text-white mb-4 text-center">
                     Timed Mode Top 10
                 </h2>
+                
                 <div id="leaderboard-loading" class="text-center text-white">Loading...</div>
                 <ol id="leaderboard-list" class="space-y-3">
-                    </ol>
+                </ol>
+                <p class="text-center text-white mt-2">
+                    <span class="opacity-90">Total Players:</span>
+                    <span id="total-players" class="font-semibold">Loading…</span>
+                </p>
             </div>
         </div>
 
@@ -93,40 +139,82 @@
                     About
                 </h2>
                 <div id="about-body" class="text-center text-white">
-                    <p class="">
+                    <p>
                         Thank you for visiting my site! I am a huge word-game enthusiast. Visit the github to request any features or report bugs.
                     </p>
+
                 </div>
             </div>
         </div>
 
-        <div class="pt-8 pb-4"> <a href="https://github.com/iujab/wordhunt-endless-mode" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository">
+        <div class="pt-8 pb-4">
+            <a href="https://github.com/iujab/wordhunt-endless-mode" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository">
                 <img src="assets/github-mark-black.svg" alt="GitHub Icon" class="w-8 h-8 hover:opacity-80 transition-opacity">
             </a>
         </div>
 
-    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-[#84a98c] p-8 rounded-lg shadow-2xl text-left max-w-sm mx-4 w-full">
-            <h2 id="modal-title" class="text-white text-2xl font-bold text-slate-800 mb-4">Login</h2>
-            
-            <form id="auth-form">
-                <div id="username-field" class="mb-4">
-                    <label for="username" class="block text-white mb-1">Username</label>
-                    <input type="text" id="username" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required minlength="3" maxlength="15">
-                </div>
-                <div class="mb-6">
-                    <label for="password" class="block text-white mb-1">Password</label>
-                    <input type="password" id="password" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required minlength="6">
-                </div>
-                <p id="auth-error" class="text-red-500 text-sm mb-4 hidden"></p>
-                <div class="flex justify-between items-center">
-                    <button type="submit" id="modal-submit-btn" class="bg-sky-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-700 transition">Login</button>
-                    <button type="button" id="modal-close-btn" class="text-white hover:text-red-700">Cancel</button>
-                </div>
-            </form>
+        <!-- Auth modal -->
+        <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-[#84a98c] p-8 rounded-lg shadow-2xl text-left max-w-sm mx-4 w-full">
+                <h2 id="modal-title" class="text-white text-2xl font-bold text-slate-800 mb-4">Login</h2>
+                
+                <form id="auth-form">
+                    <div id="username-field" class="mb-4">
+                        <label for="username" class="block text-white mb-1">Username</label>
+                        <input type="text" id="username" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required minlength="3" maxlength="15">
+                    </div>
+                    <div class="mb-6">
+                        <label for="password" class="block text-white mb-1">Password</label>
+                        <input type="password" id="password" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" required minlength="6">
+                    </div>
+                    <p id="auth-error" class="text-red-500 text-sm mb-4 hidden"></p>
+                    <div class="flex justify-between items-center">
+                        <button type="submit" id="modal-submit-btn" class="bg-sky-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-sky-700 transition">Login</button>
+                        <button type="button" id="modal-close-btn" class="text-white hover:text-red-700">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
+    </div> <!-- /root flex container -->
+
+    <!-- Auth / leaderboard / rank logic -->
     <script src="scripts/auth.js"></script>
+
+    <!-- Player count fetcher -->
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const counterEl = document.getElementById('total-players');
+        if (!counterEl || !window.firebase) return;
+
+        const {
+            db,
+            collection,
+            getCountFromServer,
+            getDocs
+        } = window.firebase;
+
+        try {
+            let countVal = 0;
+
+            // Prefer getCountFromServer (fast, doesn't pull all docs)
+            if (typeof getCountFromServer === 'function') {
+                const usersRef = collection(db, 'users');
+                const aggSnap = await getCountFromServer(usersRef);
+                // Firestore returns { count: <number> } from .data()
+                countVal = aggSnap.data().count || 0;
+            } else {
+                // Fallback for older browsers/SDKs: pull and count
+                const snap = await getDocs(collection(db, 'users'));
+                countVal = snap.size;
+            }
+
+            counterEl.textContent = new Intl.NumberFormat().format(countVal);
+        } catch (err) {
+            console.error('Failed to load total players:', err);
+            counterEl.textContent = '—';
+        }
+    });
+    </script>
 </body>
 </html>
