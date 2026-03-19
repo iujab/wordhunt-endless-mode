@@ -12,7 +12,6 @@ const possibleWordsEl = document.getElementById('possible-words');
 const wordCountEl = document.getElementById('word-count');
 const revealBtn = document.getElementById('reveal-btn');
 const newBoardBtn = document.getElementById('new-board-btn');
-const gameButtonsContainer = document.getElementById('game-buttons');
 const messageOverlay = document.getElementById('message-overlay');
 const messageText = document.getElementById('message-text');
 const messageScore = document.getElementById('message-score');
@@ -29,7 +28,10 @@ const CUSTOM_DICE = [
     "EBDEGT","IJKSUV","OPRTUX","AEIOUN","AEIOUE","EERLST",
     "THNDSO","BINGES","CRANES","PEOELE","LECHTK","ERGAIL"
 ];
-const RICH_BOARD_ATTEMPTS = 2; 
+const RICH_BOARD_ATTEMPTS = 2;
+const MIN_WORD_LENGTH = 3;
+const SCORE_TABLE = { 3: 100, 4: 400, 5: 800, 6: 1400 };
+const SCORE_EXTRA_PER_LETTER = 400;
 const DIRECTIONS = [
     [-1,-1],[-1,0],[-1,1],
     [0,-1],       [0,1],
@@ -318,7 +320,7 @@ function solveBoard(currentGrid) {
         if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE || visited[r][c]) return;
         w += currentGrid[r][c];
         if (!PREFIXES.has(w) && !DICTIONARY.has(w)) return;
-        if (w.length >= 3 && DICTIONARY.has(w)) found.add(w);
+        if (w.length >= MIN_WORD_LENGTH && DICTIONARY.has(w)) found.add(w);
         visited[r][c] = true;
         for (const [dr, dc] of DIRECTIONS) dfs(r + dr, c + dc, w);
         visited[r][c] = false;
@@ -402,12 +404,8 @@ function handleNewBoard(isFirstTime = false) {
 
 // --- Scoring & Reveal ---
 function updateScore(word) {
-    let pts = 0, L = word.length;
-    if (L === 3) pts = 100;
-    else if (L === 4) pts = 400;
-    else if (L === 5) pts = 800;
-    else if (L === 6) pts = 1400;
-    else if (L >= 7) pts = 1400 + (L - 6) * 400;
+    const L = word.length;
+    const pts = SCORE_TABLE[L] ?? SCORE_TABLE[6] + (L - 6) * SCORE_EXTRA_PER_LETTER;
     score += pts;
     if (scoreEl) scoreEl.textContent = new Intl.NumberFormat().format(score);
 }
@@ -538,7 +536,7 @@ function handleInteractionEnd(e) {
     isDragging = false;
     resetSelection();
 
-    if (tilesInPath.length < 3) return;
+    if (tilesInPath.length < MIN_WORD_LENGTH) return;
 
     const isAWord = allPossibleWords.has(word);
     const isAlreadyFound = foundWords.has(word);
