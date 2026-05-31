@@ -12,6 +12,28 @@
 </head>
 <body class="flex items-center justify-center min-h-screen">
 
+    <!-- Firebase init (read-only) — needed to read all users' scores for the end-of-run histogram -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC0LqycO4DZx89kPkQ3iI6C-K65U3C6Aog",
+            authDomain: "endlesswordhunt.firebaseapp.com",
+            projectId: "endlesswordhunt",
+            storageBucket: "endlesswordhunt.appspot.com",
+            messagingSenderId: "15556452050",
+            appId: "1:15556452050:web:9e918af139faf56a1b170b",
+            measurementId: "G-35NR49XGC4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Expose only what histogram.js needs (read-only).
+        window.firebase = { db, collection, getDocs };
+    </script>
+
     <button
         id="sound-toggle"
         type="button"
@@ -70,7 +92,10 @@
         <div id="message-box" class="bg-[#84a98c] p-8 rounded-lg shadow-2xl text-center max-w-sm mx-4">
             <p id="message-text" class="text-white text-2xl font-bold text-slate-800"></p>
             <p id="message-score" class="text-white text-xl mt-2"></p>
-            
+
+            <!-- Score distribution histogram (timed mode only) -->
+            <div id="score-histogram" class="mt-4 hidden bg-white rounded-lg p-4 shadow-inner"></div>
+
             <div id="timed-words-wrapper" class="mt-2 hidden bg-white rounded-lg p-4 text-left shadow-inner">
                 <ul id="timed-words-list"
                     class="max-h-48 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-left text-slate-800">
@@ -84,6 +109,7 @@
         </div>
     </div>
 
+    <script src="scripts/histogram.js"></script>
     <script src="scripts/script.js"></script>
     <script>
         // Initialize the game as soon as the main script is loaded

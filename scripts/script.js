@@ -302,6 +302,7 @@ function endGame(message) {
         timerEl.textContent = '0';
         localStorage.setItem('lastTimedScore', score);
         renderTimedWords();
+        if (window.renderScoreHistogram) window.renderScoreHistogram(score);
     }
 
     messageText.textContent = message;

@@ -110,6 +110,33 @@ body {
     background: #374151;
 }
 
+/* Score distribution histogram (timed mode end screen) */
+.wh-hist {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 8rem;
+    width: 100%;
+    padding-top: 0.5rem;
+}
+.wh-hist-col {
+    flex: 1 1 0;
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+}
+.wh-hist-bar {
+    width: 100%;
+    min-height: 2px;
+    background-color: #84a98c; /* matches the site's card green */
+    border-radius: 2px 2px 0 0;
+    transition: height 0.3s ease-out;
+}
+/* The bucket the player's finished run lands in */
+.wh-hist-bar--you {
+    background-color: #0284c7; /* sky-600 — matches the site's primary buttons */
+}
+
 /* Styling for disabled buttons */
 button:disabled {
     background-color: #94a3b8; /* Tailwind's slate-400 */
