@@ -12,10 +12,19 @@
 </head>
 <body class="flex items-center justify-center min-h-screen">
 
-    <!-- Firebase init (read-only) — needed to read all users' scores for the end-of-run histogram -->
+    <!-- Firebase init (read-only) — needed to aggregate users' scores for the end-of-run histogram -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import {
+            getFirestore,
+            collection,
+            query,
+            where,
+            orderBy,
+            limit,
+            getDocs,
+            getCountFromServer
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC0LqycO4DZx89kPkQ3iI6C-K65U3C6Aog",
@@ -31,7 +40,7 @@
         const db = getFirestore(app);
 
         // Expose only what histogram.js needs (read-only).
-        window.firebase = { db, collection, getDocs };
+        window.firebase = { db, collection, query, where, orderBy, limit, getDocs, getCountFromServer };
     </script>
 
     <button

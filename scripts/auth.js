@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         where,
         orderBy,
         limit,
-        getDocs,
+        getCountFromServer,
         writeBatch,
         onSnapshot
     } = window.firebase;
@@ -210,8 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         rankEl.textContent = 'Calculating...';
                         const usersRef = collection(db, 'users');
                         const q = query(usersRef, where('highScore', '>', highScore));
-                        const querySnapshot = await getDocs(q);
-                        const rank = querySnapshot.size + 1;
+                        // Server-side count: one aggregation read instead of
+                        // downloading every higher-scoring user document.
+                        const countSnap = await getCountFromServer(q);
+                        const rank = countSnap.data().count + 1;
                         rankEl.textContent = `#${new Intl.NumberFormat().format(rank)}`;
                     }
                 }
