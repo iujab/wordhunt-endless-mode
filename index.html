@@ -15,70 +15,23 @@
 </head>
 <body class="">
 
-    <!-- Firebase init / expose SDKs to window.firebase -->
+    <!-- Supabase init / expose the client to window.supa -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import {
-            getAuth,
-            createUserWithEmailAndPassword,
-            signInWithEmailAndPassword,
-            onAuthStateChanged,
-            signOut
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import {
-            getFirestore,
-            doc,
-            setDoc,
-            getDoc,
-            collection,
-            query,
-            where,
-            orderBy,
-            limit,
-            getDocs,
-            writeBatch,
-            onSnapshot,
-            getCountFromServer
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/+esm";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyC0LqycO4DZx89kPkQ3iI6C-K65U3C6Aog",
-            authDomain: "endlesswordhunt.firebaseapp.com",
-            projectId: "endlesswordhunt",
-            storageBucket: "endlesswordhunt.appspot.com",
-            messagingSenderId: "15556452050",
-            appId: "1:15556452050:web:9e918af139faf56a1b170b",
-            measurementId: "G-35NR49XGC4"
-        };
+        window.supa = createClient(
+            "https://iessgztntmhfcjqgoyjs.supabase.co",
+            "sb_publishable_qS5Xct8xSEvt7fA8JpnjxA_h1YwK1t9"
+        );
+    </script>
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // Expose what the rest of the site needs (auth.js, player count script, etc.)
-        window.firebase = {
-            auth,
-            db,
-            createUserWithEmailAndPassword,
-            signInWithEmailAndPassword,
-            onAuthStateChanged,
-            signOut,
-            doc,
-            setDoc,
-            getDoc,
-            collection,
-            query,
-            where,
-            orderBy,
-            limit,
-            getDocs,
-            writeBatch,
-            onSnapshot,
-            getCountFromServer
-        };
+    <!-- Google Analytics (same measurement ID Firebase Analytics reported to) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-35NR49XGC4"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-35NR49XGC4');
     </script>
 
     <div class="relative flex flex-col items-center justify-center min-h-screen p-4">
@@ -185,31 +138,16 @@
     <script>
     document.addEventListener('DOMContentLoaded', async () => {
         const counterEl = document.getElementById('total-players');
-        if (!counterEl || !window.firebase) return;
-
-        const {
-            db,
-            collection,
-            getCountFromServer,
-            getDocs
-        } = window.firebase;
+        if (!counterEl || !window.supa) return;
 
         try {
-            let countVal = 0;
+            // head:true returns only the count — no rows are transferred.
+            const { count, error } = await window.supa
+                .from('profiles')
+                .select('*', { count: 'exact', head: true });
+            if (error) throw error;
 
-            // Prefer getCountFromServer (fast, doesn't pull all docs)
-            if (typeof getCountFromServer === 'function') {
-                const usersRef = collection(db, 'users');
-                const aggSnap = await getCountFromServer(usersRef);
-                // Firestore returns { count: <number> } from .data()
-                countVal = aggSnap.data().count || 0;
-            } else {
-                // Fallback for older browsers/SDKs: pull and count
-                const snap = await getDocs(collection(db, 'users'));
-                countVal = snap.size;
-            }
-
-            counterEl.textContent = new Intl.NumberFormat().format(countVal);
+            counterEl.textContent = new Intl.NumberFormat().format(count || 0);
         } catch (err) {
             console.error('Failed to load total players:', err);
             counterEl.textContent = '—';

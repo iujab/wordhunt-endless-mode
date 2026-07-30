@@ -2,10 +2,9 @@
 // marking where the run the player just finished lands. Exposes
 // window.renderScoreHistogram(runScore), called from script.js's endGame().
 //
-// Built from Firestore server-side count aggregations rather than downloading
-// every user document: each count costs one read per 1,000 index entries and
-// transfers no document data, so a render is ~20 tiny requests no matter how
-// many users exist.
+// Built from a single SQL aggregation (the score_histogram RPC groups every
+// ranked player's best score into buckets server-side), plus three tiny
+// queries: top score, ranked-player count, and players-beaten count.
 (function () {
     const BUCKET_TARGET = 18;   // approximate number of bars
     const MIN_PLAYERS = 5;      // need at least this many ranked players to bother
@@ -15,54 +14,44 @@
         return Math.max(100, Math.ceil(raw / 100) * 100);
     }
 
-    // Returns window.firebase if it exposes everything we need, else null.
-    function firebaseReady() {
-        const fb = window.firebase;
-        const needed = ['db', 'collection', 'query', 'where', 'orderBy', 'limit', 'getDocs', 'getCountFromServer'];
-        return fb && needed.every((name) => fb[name]) ? fb : null;
-    }
-
-    // Server-side count of users matching the given where() constraints.
-    async function countUsers(fb, constraints) {
-        const q = fb.query(fb.collection(fb.db, 'users'), ...constraints);
-        const snap = await fb.getCountFromServer(q);
-        return snap.data().count;
-    }
-
-    // Count ranked users whose highScore falls in [lo, hi); hi === null means unbounded.
-    function countRange(fb, lo, hi) {
-        const constraints = [lo > 0 ? fb.where('highScore', '>=', lo) : fb.where('highScore', '>', 0)];
-        if (hi !== null) constraints.push(fb.where('highScore', '<', hi));
-        return countUsers(fb, constraints);
-    }
-
     // Aggregate the distribution and work out where this run lands. Returns
     // null when there aren't enough ranked players.
-    async function fetchHistogram(fb, runScore) {
-        // Current top score (one document read) and ranked-player total (one count).
-        const [topSnap, total] = await Promise.all([
-            fb.getDocs(fb.query(fb.collection(fb.db, 'users'), fb.orderBy('highScore', 'desc'), fb.limit(1))),
-            countRange(fb, 0, null)
+    async function fetchHistogram(supa, runScore) {
+        // Current top score and ranked-player total, in parallel.
+        const [topRes, totalRes] = await Promise.all([
+            supa.from('profiles').select('high_score')
+                .order('high_score', { ascending: false }).limit(1),
+            supa.from('profiles').select('*', { count: 'exact', head: true })
+                .gt('high_score', 0)
         ]);
+        if (topRes.error) throw topRes.error;
+        if (totalRes.error) throw totalRes.error;
+
+        const total = totalRes.count || 0;
         if (total < MIN_PLAYERS) return null;
 
-        const topScore = topSnap.empty ? 0 : (topSnap.docs[0].data().highScore || 0);
+        const topScore = topRes.data[0]?.high_score || 0;
         const maxScore = Math.max(runScore, topScore);
         const width = roundWidth(maxScore / BUCKET_TARGET);
         const bucketCount = Math.floor(maxScore / width) + 1;
 
-        // One count per bar, all in parallel. The last bucket is open-ended so
-        // the top score always lands in it.
-        const bucketsPromise = Promise.all(
-            Array.from({ length: bucketCount }, (_, i) =>
-                countRange(fb, i * width, i === bucketCount - 1 ? null : (i + 1) * width))
-        );
-        // Ranked players this run scored at least as well as.
-        const beatenPromise = countUsers(fb, [fb.where('highScore', '>', 0), fb.where('highScore', '<=', runScore)]);
-        const [buckets, beaten] = await Promise.all([bucketsPromise, beatenPromise]);
+        // One grouped count for all bars, plus the players this run beat.
+        const [histRes, beatenRes] = await Promise.all([
+            supa.rpc('score_histogram', { bucket_width: width }),
+            supa.from('profiles').select('*', { count: 'exact', head: true })
+                .gt('high_score', 0).lte('high_score', runScore)
+        ]);
+        if (histRes.error) throw histRes.error;
+        if (beatenRes.error) throw beatenRes.error;
+
+        const buckets = new Array(bucketCount).fill(0);
+        for (const row of histRes.data) {
+            // Fold anything past the end into the last (open-ended) bucket.
+            buckets[Math.min(row.bucket, bucketCount - 1)] += Number(row.players);
+        }
 
         const runBucket = Math.min(bucketCount - 1, Math.floor(runScore / width));
-        const percentile = Math.round((beaten / total) * 100);
+        const percentile = Math.round(((beatenRes.count || 0) / total) * 100);
 
         return { buckets, width, runBucket, percentile, total };
     }
@@ -100,8 +89,8 @@
         container.innerHTML = '<p class="text-slate-500 text-center">Loading score distribution…</p>';
 
         try {
-            const fb = firebaseReady();
-            const data = fb ? await fetchHistogram(fb, runScore) : null;
+            const supa = window.supa;
+            const data = supa ? await fetchHistogram(supa, runScore) : null;
             if (!data) {
                 container.innerHTML = '<p class="text-slate-500 text-center">Not enough data yet to compare.</p>';
                 return;

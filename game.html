@@ -12,35 +12,15 @@
 </head>
 <body class="flex items-center justify-center min-h-screen">
 
-    <!-- Firebase init (read-only) — needed to aggregate users' scores for the end-of-run histogram -->
+    <!-- Supabase init (read-only) — needed to aggregate users' scores for the end-of-run histogram -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import {
-            getFirestore,
-            collection,
-            query,
-            where,
-            orderBy,
-            limit,
-            getDocs,
-            getCountFromServer
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/+esm";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyC0LqycO4DZx89kPkQ3iI6C-K65U3C6Aog",
-            authDomain: "endlesswordhunt.firebaseapp.com",
-            projectId: "endlesswordhunt",
-            storageBucket: "endlesswordhunt.appspot.com",
-            messagingSenderId: "15556452050",
-            appId: "1:15556452050:web:9e918af139faf56a1b170b",
-            measurementId: "G-35NR49XGC4"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Expose only what histogram.js needs (read-only).
-        window.firebase = { db, collection, query, where, orderBy, limit, getDocs, getCountFromServer };
+        // The publishable key only allows what RLS policies permit (public reads).
+        window.supa = createClient(
+            "https://iessgztntmhfcjqgoyjs.supabase.co",
+            "sb_publishable_qS5Xct8xSEvt7fA8JpnjxA_h1YwK1t9"
+        );
     </script>
 
     <button
